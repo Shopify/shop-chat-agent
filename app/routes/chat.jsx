@@ -43,22 +43,17 @@ async function handleChatRequest(request) {
     // Get message from request (either from JSON body or URL params)
     let message, conversation_id;
 
-    if (request.method === "POST") {
-      const body = await request.json();
-      message = body.message;
-      conversation_id = body.conversation_id;
-    } else {
-      const url = new URL(request.url);
-      message = url.searchParams.get("message");
-      conversation_id = url.searchParams.get("conversation_id");
-    }
-
+    const body = await request.json();
+    message = body.message;
     if (!message) {
       return new Response(
         JSON.stringify({ error: "Message is required" }),
         { status: 400, headers }
       );
     }
+
+    // Generate or use existing conversation ID
+    conversation_id = body.conversation_id || Date.now().toString();
 
     // Create a stream for the response
     const encoder = new TextEncoder();
@@ -75,16 +70,23 @@ async function handleChatRequest(request) {
             apiKey: process.env.CLAUDE_API_KEY
           });
 
+
           // Initialize MCP client
-          const mcpClient = new MCPClient(request.headers.get("origin"));
-          let availableTools = [];
+          const mcpClient = new MCPClient(request.headers.get("origin"), conversation_id);
+
+          // Get customer token from request header if available
+          const customerAccessToken = request.headers.get("Customer-Access-Token");
+
 
           try {
             // Connect to MCP server and get available tools
-            availableTools = await mcpClient.connectToServer();
-            console.log(`Connected to MCP with ${availableTools.length} tools`);
+            const storefrontMcpTools = await mcpClient.connectToStorefrontServer();
+            const customerMcpTools = await mcpClient.connectToCustomerServer(customerAccessToken);
+
+            console.log(`Connected to MCP with ${storefrontMcpTools.length} tools`);
+            console.log(`Connected to customer MCP with ${customerMcpTools.length} tools`);
           } catch (error) {
-            console.warn('Failed to connect to MCP server, continuing without tools:', error.message);
+            console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
           }
 
           // Get or create conversation history
@@ -102,19 +104,15 @@ async function handleChatRequest(request) {
           const promptType = "standardAssistant"; // Can be changed to "enthusiasticAssistant" or others
           const systemInstruction = systemPrompts.systemPrompts[promptType].content;
 
-          // Generate or use existing conversation ID
-          const newConversationId = conversation_id || Date.now().toString();
-
-          // Send the conversation ID to the client
-          sendMessage({ type: 'id', conversation_id: newConversationId });
+          sendMessage({ type: 'id', conversation_id: conversation_id });
 
           let finalMessage = userMessage;
+          let userActionRequired = false;
 
-          // Generate response from Claude using streaming
-          while (finalMessage.stop_reason !== "end_turn") {
+          while (finalMessage.stop_reason !== "end_turn" && !userActionRequired) {
             const stream = await anthropic.messages.stream({
               model: 'claude-3-5-sonnet-latest',
-              max_tokens: 1000,
+              max_tokens: 2000,
               system: systemInstruction,
               messages: conversationHistory,
               tools: mcpClient.tools.length > 0 ? mcpClient.tools : undefined
@@ -141,25 +139,61 @@ async function handleChatRequest(request) {
                 const toolArgs = content.input;
                 const toolUseId = content.id;
                 const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
-                for (const content of toolUseResponse.content) {
-                  const toolUseResponseMessage = {
+                console.log("Tool use response", toolUseResponse);
+
+                // TODO: Move this to error handling below
+                // Check if this is an auth error response
+                if (toolUseResponse.error === "authorization_required") {
+                  // Handle auth error - send special message with auth URL
+                  sendMessage({
+                    type: 'auth_required',
+                    auth_url: toolUseResponse.auth_url
+                  });
+                  userActionRequired = true;
+
+                  // Add the auth message to conversation history
+                  conversationHistory.push({
                     role: 'user',
                     content: [{
                       type: "tool_result",
                       tool_use_id: toolUseId,
-                      content: content.text
+                      content: toolUseResponse.text
                     }]
-                  };
-                  conversationHistory.push(toolUseResponseMessage);
+                  });
+                } else if (toolUseResponse.error) {
+                  // TODO: Handle other tool errors
+                  conversationHistory.push({
+                    role: 'user',
+                    content: [{
+                      type: "tool_result",
+                      tool_use_id: toolUseId,
+                      content: toolUseResponse.error.data
+                    }]
+                  });
+
+                  sendMessage({ type: 'new_message' });
+                } else {
+                  // Normal tool response
+                  for (const content of toolUseResponse.content) {
+                    const toolUseResponseMessage = {
+                      role: 'user',
+                      content: [{
+                        type: "tool_result",
+                        tool_use_id: toolUseId,
+                        content: content.text
+                      }]
+                    };
+                    conversationHistory.push(toolUseResponseMessage);
+                  }
+
+                  sendMessage({ type: 'new_message' });
                 }
-                sendMessage({ type: 'new_message' });
               }
             }
           }
 
           // Store updated conversation history
-          conversations.set(newConversationId, conversationHistory);
-
+          conversations.set(conversation_id, conversationHistory);
           controller.close();
         } catch (error) {
           console.error('Error processing streaming request:', error);
@@ -171,6 +205,12 @@ async function handleChatRequest(request) {
               error: 'Authentication failed with Claude API',
               details: 'Please check your API key in environment variables',
               message: error.message
+            });
+          } else if (error.status === 529) {
+            sendMessage({
+              type: 'rate_limit_exceeded',
+              error: 'Rate limit exceeded',
+              details: 'Please try again later'
             });
           } else {
             sendMessage({

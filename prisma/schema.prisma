@@ -30,3 +30,25 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+model CustomerToken {
+  id              String    @id
+  conversationId  String
+  accessToken     String
+  refreshToken    String?
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([conversationId])
+}
+
+model CodeVerifier {
+  id              String    @id
+  state           String    @unique
+  verifier        String
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime
+  
+  @@index([state])
+}

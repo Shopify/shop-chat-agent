@@ -1,3 +1,37 @@
+// Listen for postMessage from authentication window
+window.addEventListener('message', function(event) {
+  console.log('Received message event:', event);
+  console.log('Message data:', event.data);
+
+  // Check if the message is from our authentication flow
+  if (event.data && event.data.type === 'authentication_success') {
+    console.log('Authentication success message received with token:', event.data.access_token);
+
+    try {
+      // Store the access token
+      sessionStorage.setItem('shopAiCustomerAccessToken', event.data.access_token);
+
+      // Also store token expiry if available
+      if (event.data.expires_in) {
+        const expiresAt = Date.now() + (event.data.expires_in * 1000);
+        sessionStorage.setItem('shopAiTokenExpiresAt', expiresAt);
+      }
+
+      // Maybe add a message or visual indicator that authentication succeeded
+      const messagesContainer = document.querySelector('.shop-ai-chat-messages');
+      if (messagesContainer) {
+        const authMessage = document.createElement('div');
+        authMessage.classList.add('shop-ai-message', 'assistant');
+        authMessage.textContent = 'Authentication successful! You can now continue your conversation.';
+        messagesContainer.appendChild(authMessage);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    } catch (error) {
+      console.error('Error handling authentication message:', error);
+    }
+  }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const shopAiChatContainer = document.querySelector('.shop-ai-chat-container');
     if (!shopAiChatContainer) return;
@@ -36,11 +70,10 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // Store conversation ID in sessionStorage
-    let conversationId = sessionStorage.getItem('shopAiConversationId');
-
     async function sendMessage() {
       const userMessage = chatInput.value.trim();
+      const conversationId = sessionStorage.getItem('shopAiConversationId');
+      const customerAccessToken = sessionStorage.getItem('shopAiCustomerAccessToken');
 
       // Add user message to chat
       addMessage(userMessage, 'user');
@@ -52,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showTypingIndicator();
 
       try {
-        streamResponse(userMessage);
+        streamResponse(userMessage, conversationId, customerAccessToken);
       } catch (error) {
         console.error('Error communicating with Claude API:', error);
         removeTypingIndicator();
@@ -88,12 +121,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Stream the response from the API
-    async function streamResponse(userMessage) {
+    async function streamResponse(userMessage, conversationId, customerAccessToken) {
       try {
         // Prepare the request body
         const requestBody = JSON.stringify({
           message: userMessage,
-          conversation_id: conversationId
+          conversation_id: conversationId,
         });
 
         // Set up event source for streaming
@@ -105,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'text/event-stream',
+            'Customer-Access-Token': customerAccessToken
           },
           body: requestBody
         });
@@ -146,6 +180,15 @@ document.addEventListener('DOMContentLoaded', function() {
                   // Save conversation ID
                   conversationId = data.conversation_id;
                   sessionStorage.setItem('shopAiConversationId', conversationId);
+
+                  // Store token if available
+                  if (data.access_token) {
+                    sessionStorage.setItem('shopAiCustomerAccessToken', data.access_token);
+                    // Also store token expiry if available
+                    if (data.expires_at) {
+                      sessionStorage.setItem('shopAiTokenExpiresAt', data.expires_at);
+                    }
+                  }
                 }
                 else if (data.type === 'chunk') {
                   console.log('chunk', data.chunk);
@@ -170,6 +213,19 @@ document.addEventListener('DOMContentLoaded', function() {
                   // Handle error
                   console.error('Stream error:', data.error);
                   messageElement.textContent = "Sorry, I couldn't process your request. Please try again later.";
+                }
+                else if (data.type === 'rate_limit_exceeded') {
+                  // Handle error
+                  console.error('Rate limit exceeded:', data.error);
+                  messageElement.textContent = "Sorry, our servers are currently busy. Please try again later.";
+                }
+                else if (data.type === 'auth_required') {
+                  // Open auth URL in a new tab/window
+                  window.open(data.auth_url, '_blank');
+
+                  // Add message informing the user about authentication
+                  messageElement.dataset.rawText = "I've opened an authentication window for you. Please complete the authentication there, then return to this chat and I'll retry your request.";
+                  messageElement.textContent = messageElement.dataset.rawText;
                 }
                 else if (data.type === 'new_message') {
                   // Format the previous message if needed

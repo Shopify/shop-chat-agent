@@ -184,6 +184,22 @@
     animation-delay: 0.4s;
   }
 
+  .shop-ai-auth-link {
+    display: inline-block;
+    background-color: #5046e4;
+    color: white;
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    margin-top: 10px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+
+  .shop-ai-auth-link:hover {
+    background-color: #3f36c0;
+  }
+
   @keyframes typing {
     0% {
       opacity: 0.4;
