@@ -17,51 +17,70 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - **Streaming Responses**: Streams messages for a natural chat feel.
 
 ### Prerequisites
-1. **Code Editor**  
-   Use your preferred editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)) for editing project files.  
-2. **Node.js**  
-   v18.20 or higher. Download from [nodejs.org](https://nodejs.org/) and install.  
-3. **Shopify Partner Account**  
-   Sign up at [shopify.com/partners](https://www.shopify.com/partners).  
-4. **Shopify Development Store**  
-   Create a dev store for testing - see the [Development stores guide](https://shopify.dev/docs/api/development-stores). Make sure to add some sample products.  
-5. **Anthropic API Key**  
-   Generate a key in the [Anthropic Console](https://console.anthropic.com/) and store it securely. This template uses Claude, but you can swap in any LLM by updating the code.  
+1. **Code Editor**: Use your preferred editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)) for editing project files.  
+2. **Node.js**: v18.20 or higher. Download from [nodejs.org](https://nodejs.org/) and install.  
+3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners).  
+4. **Shopify Development Store**: Create a dev store for testing - see the [Development stores guide](https://shopify.dev/docs/api/development-stores). Make sure to add some sample products.  
+5. **Anthropic API Key**: Generate a key in the [Anthropic Console](https://console.anthropic.com/) and store it securely. This template uses Claude, but you can swap in any LLM by updating the code.  
 6. *_Register your app on the new Shopify Developer Platform to enable Customer Accounts (steps TBD)._*
+
 
 ## Getting Started
 
 ### Installation
 
-1. Clone the repository
+1. Clone the repository.
    ```shell
    git clone https://github.com/Shopify/shop-chat-agent.git
    cd shop-chat-agent
    ```
 
-2. Install dependencies
+2. Install dependencies.
    ```shell
    npm install
    ```
 
-3. Set up environment variables
+3. Set up environment variables.
    <br>Create a `.env` file with the following:
    ```
    CLAUDE_API_KEY=your_claude_api_key
    ```
 
-### Development
+### Create the app
 
-4. Start the development server:
+4. Start the development server.
+    <br> If prompted, choose the organization this is for in your Terminal.
    ```shell
    shopify app dev --reset
    ```
 
-1. Say yes, create it as a new app
-2. Hit enter to accept the default name - all references are to this name, it should be `shop-chat-agent`
-3. Choose a development store - MUST be a development store
-4. Add password - Copy the URL in Terminal to get the direct link to access your store's password
-5. End state is you will have a Preview URL... at this point we need to make a few more code changes
+6. Select Yes to create this project as a new app.
+   ```shell
+   ?  Create this project as a new app on Shopify?
+   >  (y) Yes, create it as a new app
+   ```
+
+4. Hit enter to accept the default name `shop-chat-agent`. All references in code use this name.
+   ```shell
+   ?  App name:
+   >  shop-chat-agent
+   ```
+
+4. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
+   ```shell
+   ?  Which store would you like to use to view your project?
+   ✔  your-store
+   ```
+
+4. Type in your store password. You can get it from the URL that is in your Terminal.
+   ```shell
+   ? Incorrect store password ( 
+     https://your-store.myshopify.com/admin/online_store/preferences ). Please
+      try again:
+   >  *****█________
+   ```
+
+5. At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your Terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
 
 ### Update shopify.app.toml
