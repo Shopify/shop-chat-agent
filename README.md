@@ -46,7 +46,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    CLAUDE_API_KEY=your_claude_api_key
    ```
 
-### Create the app
+### Create your app
 
 4. Start the development server.
     <br> If prompted, choose the organization this is for in your Terminal.
@@ -54,25 +54,25 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    shopify app dev --reset
    ```
 
-6. Select Yes to create this project as a new app.
+5. Select Yes to create this project as a new app.
    ```shell
    ?  Create this project as a new app on Shopify?
    >  (y) Yes, create it as a new app
    ```
 
-4. Hit enter to accept the default name `shop-chat-agent`. All references in code use this name.
+6. Hit enter to accept the default name `shop-chat-agent`. All references in code use this name.
    ```shell
    ?  App name:
    >  shop-chat-agent
    ```
 
-4. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
+7. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
    ```shell
    ?  Which store would you like to use to view your project?
    ✔  your-store
    ```
 
-4. Type in your store password. You can get it from the URL that is in your Terminal.
+8. Type in your store password. You can get it from the URL that is in your Terminal.
    ```shell
    ? Incorrect store password ( 
      https://your-store.myshopify.com/admin/online_store/preferences ). Please
@@ -80,61 +80,52 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    >  *****█________
    ```
 
-5. At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your Terminal. You can now proceed to the next step. If you get an error, restart from step 4.
+   At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your Terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
+9. Add this config to your `shopify.app.toml` file.
+   ```bash
+   [app_proxy]
+   url = "https://example.trycloudflare.com"
+   subpath = "chat"
+   prefix = "apps"
+   ```
 
-### Update shopify.app.toml
+10. In your Terminal, type `q` to quit, and then restart you dev server, without `--reset` this time.
+   ```shell
+   shopify app dev
+   ```
 
-Add below content to your shopify.app.toml file:
+11. Select yes to automatically update you app's URL.
+   ```shell
+   Have Shopify automatically update your app's URL in order to create a preview experience?
+   > Yes, automatically update
+   ```
 
-```bash
-[app_proxy]
-url = "https://example.trycloudflare.com"
-subpath = "chat"
-prefix = "apps"
-```
+### Turn on your app
 
-### Restart you dev server
+12. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your Terminal to open your store in your browser.
 
-```shell
-shopify app dev
-```
+13. You will now be in the browser and on your store's Admin portal. Install the app.
 
-### Select yes to automatically update you app url's
+14. On your Admin portal, navigate to Online Store > Themes
+    > Click Customize button<br>
+    > Click App embeds icon in the sidebar<br>
+    > Enable the toggle<br>
+    > Click Save
 
-```shell
-Have Shopify automatically update your app's URL in order to create a preview experience?
+15. View your store and test your chat application.
+ 
 
-> Yes, automatically update
-```
-
-### Install The App
-
-Head to the url provided in your shell to install the app on your demo store
-
-### Enable Chat Extension
-
-Enable the chat extension from theme editor (Online store > Themes > Customize > App embeds)
-
-## Add a explicit set of steps on how to do this
-
-## Chat Interface
-
-The chat bubble extension is located in `extensions/chat-bubble/`. It connects to the `/chat` endpoint of the app server to stream messages.
-
-## MCP Tools Integration
-
-The app integrates with Model Control Plane (MCP) tools, which allows the AI to access additional functionality. These tools are initialized in the `app/mcp-client.js` file.
-
-## Examples
-- hi, should return a LLM based response
-- can you search for snowboards. This should do a shop specific search via MCP
-- add <product name> to cart. This should execute the cart MCP and offer to checkout URL
+## Examples to try
+- `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
+- `can you search for snowboards` > will use the `search_products` MCP tool.
+- `add The Videographer Snowboard to my cart` > will use the `add_cart_items` MCP tool and offer a checkout URL.
 - <Sid will come up with ways to test CA tools>
 
 ## Deployment
 
-Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
+Customize this app for your needs by adjusting the prompt and app UI. Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
+
 
 ## Architecture
 
@@ -147,6 +138,15 @@ This will:
 - Start Remix in development mode
 - Tunnel the local server to make it accessible by Shopify
 - Provide a URL to install the app on your development store
+
+## Chat Interface
+
+The chat bubble extension is located in `extensions/chat-bubble/`. It connects to the `/chat` endpoint of the app server to stream messages.
+
+## MCP Tools Integration
+
+The app integrates with Model Control Plane (MCP) tools, which allows the AI to access additional functionality. These tools are initialized in the `app/mcp-client.js` file.
+
 
 ### API Endpoints
 
