@@ -55,7 +55,7 @@ shopify app dev --reset
 
 ### Update shopify.app.toml
 
-Add below conent:
+Add below content to your shopify.app.toml file:
 
 ```bash
 [app_proxy]
@@ -68,6 +68,14 @@ prefix = "apps"
 
 ```shell
 shopify app dev
+```
+
+### Select yes to automatically update you app url's
+
+```shell
+Have Shopify automatically update your app's URL in order to create a preview experience?
+
+> Yes, automatically update
 ```
 
 This will:
