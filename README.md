@@ -1,57 +1,61 @@
 # Build an AI Agent for Your Storefront
 
-This is a template Shopify app that interacts with a store in real time. It provides an AI-powered chat interface to help customers find products, answer questions about your shop, and complete purchases through natural conversation. The app uses Shopify’s Model Context Protocol endpoints for accurate, actionable responses. Learn more about MCP at [modelcontextprotocol.io](https://modelcontextprotocol.io/).
+This template Shopify app installs directly on your storefront and embeds an AI-powered chat widget that engages visitors in real time. Shoppers can naturally search for products, ask about your store’s policies or shipping, and complete purchases without ever leaving the conversation. Under the hood, it leverages the [Model Context Protocol](https://modelcontextprotocol.io/) to tap into Shopify’s APIs for accurate, actionable responses.
 
-## MCP Capabilities
+### MCP Capabilities
 
-- **Product Discovery**: Natural-language search and personalized recommendations
+- **Product Discovery**: Natural-language search with personalized product recommendations.
 - **Store Information**: Answer questions about policies, shipping, returns, FAQs
-- **Cart Management**: Create carts, add/remove items, and complete checkout seamlessly
+- **Cart Management**: Create carts, add or remove items, and complete checkout.
 - **Order Management**: Track order status and process returns
 
-## Features of this template app
-- **AI-Powered Chat**: Embedded chat bubble for real-time AI-powered shopping assistance (customize the prompt and/or change the LLM used, we use Claude for this template, for your needs)
-- **MCP Cliente**: The app is also an MCP client that is already aware of Shopify's MCP tools (add more MCP servers if you need it)
-- **Conversation Memory**: Maintains context throughout customer interactions
-- **Custom Chat UI**: Shopify theme extension for seamless store integration (modify the app look and feel for your store)
-- **Streaming Responses**: Real-time message streaming for natural conversation flow
+### App Features
+- **AI-Powered Chat**: Embedded chat bubble for real-time shopping assistance; swap in your preferred LLM.  
+- **Built-In MCP Client**: Ready to call Shopify’s MCP tools (e.g. search, cart, order); easily add more servers.  
+- **Persistent Context**: Remembers past messages to keep conversations coherent.  
+- **Custom Chat UI**: A theme extension you can style to match your store.  
+- **Streaming Responses**: Streams messages for a natural chat feel.
 
-
-## Prerequisites
-1. **Code Editor**: Install and use your favorite editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VSCode](https://code.visualstudio.com/download)) for opening and editing project files.
-2. **Node.js**: v18.20 or higher. Download and install from [nodejs.org](https://nodejs.org/).
-3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners)
-4. **Shopify Development Store**: For testing and development. Follow [these nstructions](https://shopify.dev/docs/api/development-stores) to create one. Make sure to select the option to add products to your store.
-5. **Anthropic API Key**: Go to the [Anthropic Console](https://console.anthropic.com/), generate a key, and store it securely. This template app uses Anthropic, but if you want to use another LLM, you can, and you'll need to modify the code.
+### Prerequisites
+1. **Code Editor**  
+   Use your preferred editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)) for editing project files.  
+2. **Node.js**  
+   v18.20 or higher. Download from [nodejs.org](https://nodejs.org/) and install.  
+3. **Shopify Partner Account**  
+   Sign up at [shopify.com/partners](https://www.shopify.com/partners).  
+4. **Shopify Development Store**  
+   Create a dev store for testing - see the [Development stores guide](https://shopify.dev/docs/api/development-stores). Make sure to add some sample products.  
+5. **Anthropic API Key**  
+   Generate a key in the [Anthropic Console](https://console.anthropic.com/) and store it securely. This template uses Claude, but you can swap in any LLM by updating the code.  
+6. *_Register your app on the new Shopify Developer Platform to enable Customer Accounts (steps TBD)._*
 
 ## Getting Started
 
 ### Installation
 
-1. Clone the repository:
+1. Clone the repository
    ```shell
    git clone https://github.com/Shopify/shop-chat-agent.git
    cd shop-chat-agent
    ```
 
-2. Install dependencies:
+2. Install dependencies
    ```shell
    npm install
    ```
 
-3. Set up environment variables:
-   - Create a `.env` file with the following:
-     ```
-     CLAUDE_API_KEY=your_claude_api_key
-     ```
+3. Set up environment variables
+   <br>Create a `.env` file with the following:
+   ```
+   CLAUDE_API_KEY=your_claude_api_key
+   ```
 
 ### Development
 
-Start the development server:
-
-```shell
-shopify app dev --reset
-```
+4. Start the development server:
+   ```shell
+   shopify app dev --reset
+   ```
 
 1. Say yes, create it as a new app
 2. Hit enter to accept the default name - all references are to this name, it should be `shop-chat-agent`
