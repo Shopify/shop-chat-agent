@@ -33,7 +33,7 @@
   };
 </script>
 
-{{ 'chat.js' | asset_url | script_tag }}
+<script src="{{ 'chat.js' | asset_url }}" defer></script>
 
 {% schema %}
 {
