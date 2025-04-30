@@ -1,10 +1,13 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "f30b1cea4f157c23b74b37ed86cb7aee"
-name = "shop-chat-agent-v3"
-handle = "shop-chat-agent-v3"
-application_url = "https://screening-declare-friend-encyclopedia.trycloudflare.com"
+client_id = "YOUR_CLIENT_ID"
+name = "shop-chat-agent"
+handle = "shop-chat-agent"
+application_url = "https://example.com"
 embedded = true
+
+[build]
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-04"
@@ -14,20 +17,7 @@ api_version = "2025-04"
 scopes = ""
 
 [auth]
-redirect_urls = [
-  "https://screening-declare-friend-encyclopedia.trycloudflare.com/auth/callback",
-  "https://screening-declare-friend-encyclopedia.trycloudflare.com/auth/shopify/callback",
-  "https://screening-declare-friend-encyclopedia.trycloudflare.com/api/auth/callback"
-]
+redirect_urls = [ "https://example.com/api/auth" ]
 
 [pos]
 embedded = false
-
-[build]
-automatically_update_urls_on_dev = true
-include_config_on_deploy = true
-
-[app_proxy]
-url = "https://screening-declare-friend-encyclopedia.trycloudflare.com"
-subpath = "chat"
-prefix = "apps"

@@ -45,21 +45,26 @@ This is a template Shopify app that interacts with a store in real time. It prov
      CLAUDE_API_KEY=your_claude_api_key
      ```
 
-4. Configure your Shopify app
-   - Open `shopify.app.toml` in your editor and update the client_id on line 3:
-     ```json
-     client_id = "YOUR_CLIENT_ID"
-     ```
-
-### Deploy Your App
-
-```shell
-shopify app deploy
-```
-
 ### Development
 
 Start the development server:
+
+```shell
+shopify app dev --reset
+```
+
+### Update shopify.app.toml
+
+Add below conent:
+
+```bash
+[app_proxy]
+url = "https://example.trycloudflare.com"
+subpath = "chat"
+prefix = "apps"
+```
+
+### Restart you dev server
 
 ```shell
 shopify app dev
