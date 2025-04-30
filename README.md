@@ -1,32 +1,28 @@
-# Shop Chat Agent
+# Build an AI Agent for Your Storefront
 
-A Shopify app that provides an AI-powered chat interface for online stores, enabling customers to ask questions about products, shipping, returns, and more.
+This is a template Shopify app that interacts with a store in real time. It provides an AI-powered chat interface to help customers find products, answer questions about your shop, and complete purchases through natural conversation. The app uses Shopify’s Model Context Protocol endpoints for accurate, actionable responses. Learn more about MCP at [modelcontextprotocol.io](https://modelcontextprotocol.io/).
 
-## Features
+## MCP Capabilities
 
-- 🤖 **AI-Powered Chat**: Embedded chat bubble for real-time customer assistance
-- 🧰 **Tool Usage**: Support for MCP tools to enhance AI capabilities
-- 🔄 **Conversation Memory**: Maintains context throughout customer interactions
-- 📱 **Custom Chat UI**: Shopify theme extension for seamless store integration
-- 📊 **Streaming Responses**: Real-time message streaming for natural conversation flow
+- **Product Discovery**: Natural-language search and personalized recommendations
+- **Store Information**: Answer questions about policies, shipping, returns, FAQs
+- **Cart Management**: Create carts, add/remove items, and complete checkout seamlessly
+- **Order Management**: Track order status and process returns
 
-## Architecture
+## Features of this template app
+- **AI-Powered Chat**: Embedded chat bubble for real-time AI-powered shopping assistance (customize the prompt and/or change the LLM used, we use Claude for this template, for your needs)
+- **MCP Cliente**: The app is also an MCP client that is already aware of Shopify's MCP tools (add more MCP servers if you need it)
+- **Conversation Memory**: Maintains context throughout customer interactions
+- **Custom Chat UI**: Shopify theme extension for seamless store integration (modify the app look and feel for your store)
+- **Streaming Responses**: Real-time message streaming for natural conversation flow
 
-This app consists of two main components:
-
-1. **Backend API**: A Remix app server that handles communication with Claude and processes chat messages
-2. **Chat Bubble UI**: A Shopify theme extension that provides the customer-facing chat interface
-
-### API Endpoints
-
-- `/chat`: Main endpoint for streaming chat messages, supports both GET and POST requests
 
 ## Prerequisites
-
-1. **Node.js**: v18.20 or higher
-2. **Shopify Partner Account**: Required for app development and deployment
-3. **Claude API Key**: Required for AI functionality
-4. **Shopify Development Store**: For testing and development
+1. **Code Editor**: Install and use your favorite editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VSCode](https://code.visualstudio.com/download)) for opening and editing project files.
+2. **Node.js**: v18.20 or higher. Download and install from [nodejs.org](https://nodejs.org/).
+3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners)
+4. **Shopify Development Store**: For testing and development. Follow [these nstructions](https://shopify.dev/docs/api/development-stores) to create one.
+5. **Anthropic API Key**: Go to the [Anthropic Console](https://console.anthropic.com/), generate a key, and store it securely.
 
 ## Getting Started
 
@@ -47,6 +43,12 @@ This app consists of two main components:
    - Create a `.env` file with the following:
      ```
      CLAUDE_API_KEY=your_claude_api_key
+     ```
+
+4. Configure your Shopify app
+   - Open `shopify.app.toml` in your editor and update the client_id on line 3:
+     ```json
+     client_id = "YOUR_CLIENT_ID"
      ```
 
 ### Deploy Your App
@@ -88,6 +90,18 @@ The app integrates with Model Control Plane (MCP) tools, which allows the AI to 
 ## Deployment
 
 Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
+
+## Architecture
+
+This app consists of two main components:
+
+1. **Backend API**: A Remix app server that handles communication with Claude and processes chat messages
+2. **Chat Bubble UI**: A Shopify theme extension that provides the customer-facing chat interface
+
+### API Endpoints
+
+- `/chat`: Main endpoint for streaming chat messages, supports both GET and POST requests
+
 
 ## Tech Stack
 
