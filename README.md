@@ -21,8 +21,8 @@ This is a template Shopify app that interacts with a store in real time. It prov
 1. **Code Editor**: Install and use your favorite editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VSCode](https://code.visualstudio.com/download)) for opening and editing project files.
 2. **Node.js**: v18.20 or higher. Download and install from [nodejs.org](https://nodejs.org/).
 3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners)
-4. **Shopify Development Store**: For testing and development. Follow [these nstructions](https://shopify.dev/docs/api/development-stores) to create one.
-5. **Anthropic API Key**: Go to the [Anthropic Console](https://console.anthropic.com/), generate a key, and store it securely.
+4. **Shopify Development Store**: For testing and development. Follow [these nstructions](https://shopify.dev/docs/api/development-stores) to create one. Make sure to select the option to add products to your store.
+5. **Anthropic API Key**: Go to the [Anthropic Console](https://console.anthropic.com/), generate a key, and store it securely. This template app uses Anthropic, but if you want to use another LLM, you can, and you'll need to modify the code.
 
 ## Getting Started
 
@@ -53,6 +53,13 @@ Start the development server:
 shopify app dev --reset
 ```
 
+1. Say yes, create it as a new app
+2. Hit enter to accept the default name - all references are to this name, it should be `shop-chat-agent`
+3. Choose a development store - MUST be a development store
+4. Add password - Copy the URL in Terminal to get the direct link to access your store's password
+5. End state is you will have a Preview URL... at this point we need to make a few more code changes
+
+
 ### Update shopify.app.toml
 
 Add below content to your shopify.app.toml file:
@@ -78,11 +85,6 @@ Have Shopify automatically update your app's URL in order to create a preview ex
 > Yes, automatically update
 ```
 
-This will:
-- Start Remix in development mode
-- Tunnel the local server to make it accessible by Shopify
-- Provide a URL to install the app on your development store
-
 ### Install The App
 
 Head to the url provided in your shell to install the app on your demo store
@@ -90,6 +92,8 @@ Head to the url provided in your shell to install the app on your demo store
 ### Enable Chat Extension
 
 Enable the chat extension from theme editor (Online store > Themes > Customize > App embeds)
+
+## Add a explicit set of steps on how to do this
 
 ## Chat Interface
 
@@ -99,6 +103,11 @@ The chat bubble extension is located in `extensions/chat-bubble/`. It connects t
 
 The app integrates with Model Control Plane (MCP) tools, which allows the AI to access additional functionality. These tools are initialized in the `app/mcp-client.js` file.
 
+## Examples
+- hi, should return a LLM based response
+- can you search for snowboards. This should do a shop specific search via MCP
+- add <product name> to cart. This should execute the cart MCP and offer to checkout URL
+- <Sid will come up with ways to test CA tools>
 
 ## Deployment
 
@@ -111,6 +120,11 @@ This app consists of two main components:
 1. **Backend API**: A Remix app server that handles communication with Claude and processes chat messages
 2. **Chat Bubble UI**: A Shopify theme extension that provides the customer-facing chat interface
 
+This will:
+- Start Remix in development mode
+- Tunnel the local server to make it accessible by Shopify
+- Provide a URL to install the app on your development store
+
 ### API Endpoints
 
 - `/chat`: Main endpoint for streaming chat messages, supports both GET and POST requests
@@ -122,6 +136,8 @@ This app consists of two main components:
 - **AI**: [Claude by Anthropic](https://www.anthropic.com/claude)
 - **Shopify Integration**: [@shopify/shopify-app-remix](https://www.npmjs.com/package/@shopify/shopify-app-remix)
 - **Database**: SQLite (via Prisma) for session storage
+
+## If you want to use another LLM, here's what you will have to do
 
 ## Contributing
 
