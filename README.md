@@ -1,6 +1,6 @@
 # Build an AI Agent for Your Storefront
 
-This template Shopify app installs directly on your storefront and embeds an AI-powered chat widget that engages visitors in real time. Shoppers can intuitively search for products, ask about your store’s policies or shipping, and complete purchases without ever leaving the conversation. Under the hood, it leverages the [Model Context Protocol](https://modelcontextprotocol.io/) to tap into Shopify’s APIs for accurate, actionable responses.
+This template Shopify app installs directly on your storefront and embeds an AI-powered chat widget that engages visitors in real time. Shoppers can naturally search for products, ask about your store’s policies or shipping, and complete purchases without ever leaving the conversation. Under the hood, it leverages the [Model Context Protocol](https://modelcontextprotocol.io/) to tap into Shopify’s APIs for accurate, actionable responses.
 
 ### MCP Capabilities
 
@@ -12,7 +12,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 ### App Features
 - **AI-Powered Chat**: Embedded chat bubble for real-time shopping assistance; swap in your preferred LLM.  
 - **Built-In MCP Client**: Ready to call Shopify’s MCP tools (e.g. search, cart, order); easily add more servers.  
-- **Persistent Context**: Remembers past messages to keep conversations consistent.  
+- **Persistent Context**: Remembers past messages to keep conversations coherent.  
 - **Custom Chat UI**: A theme extension you can style to match your store.  
 - **Streaming Responses**: Streams messages for a natural chat feel.
 
