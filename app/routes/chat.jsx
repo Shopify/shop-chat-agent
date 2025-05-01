@@ -1,12 +1,24 @@
 import { json } from "@remix-run/node";
 import { Anthropic } from "@anthropic-ai/sdk";
 import MCPClient from "../mcp-client";
+import systemPrompts from "../prompts/prompts.json";
 
 // Simple memory store for conversations (in production, use a database)
 const conversations = new Map();
 
 // This route is now API-only. Only requests with Accept: text/event-stream are supported.
 export async function loader({ request }) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Accept",
+      },
+    });
+  }
+
   if (request.headers.get("Accept") === "text/event-stream") {
     return handleChatRequest(request);
   }
@@ -22,7 +34,7 @@ async function handleChatRequest(request) {
     "Cache-Control": "no-cache",
     "Connection": "keep-alive",
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
     "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
   };
@@ -53,7 +65,6 @@ async function handleChatRequest(request) {
     const responseStream = new ReadableStream({
       async start(controller) {
         const sendMessage = (data) => {
-          console.log('sendMessage', data);
           const text = `data: ${JSON.stringify(data)}\n\n`;
           controller.enqueue(encoder.encode(text));
         };
@@ -86,8 +97,10 @@ async function handleChatRequest(request) {
           let userMessage = { role: 'user', content: message };
           conversationHistory.push(userMessage);
 
-          // Define system instructions
-          const systemInstruction = 'You are a helpful store assistant for an e-commerce shop. Answer the customer\'s questions in a friendly, helpful way about products, shipping, returns, or anything else about the store.';
+          // Get system prompt from JSON file
+          // You can easily switch between different prompts by changing which one is used here
+          const promptType = "standardAssistant"; // Can be changed to "enthusiasticAssistant" or others
+          const systemInstruction = systemPrompts.systemPrompts[promptType].content;
 
           // Generate or use existing conversation ID
           const newConversationId = conversation_id || Date.now().toString();
