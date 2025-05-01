@@ -129,6 +129,9 @@ async function handleChatRequest(request) {
               for (const content of message.content) {
                 conversationHistory.push({role: message.role, content: [content]});
               }
+
+              // Send a completion message
+              sendMessage({ type: 'done' });
             });
 
             finalMessage = await stream.finalMessage();
@@ -157,8 +160,6 @@ async function handleChatRequest(request) {
           // Store updated conversation history
           conversations.set(newConversationId, conversationHistory);
 
-          // Send a completion message
-          sendMessage({ type: 'done' });
           controller.close();
         } catch (error) {
           console.error('Error processing streaming request:', error);

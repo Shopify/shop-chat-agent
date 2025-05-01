@@ -88,6 +88,9 @@
     border-radius: 18px;
     font-size: 14px;
     line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   .shop-ai-message.assistant {
@@ -96,11 +99,27 @@
     border-bottom-left-radius: 4px;
   }
 
+  .shop-ai-message.assistant a {
+    color: #5046e4;
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  .shop-ai-message.assistant a:hover {
+    opacity: 0.8;
+  }
+
   .shop-ai-message.user {
     align-self: flex-end;
     background-color: #5046e4;
     color: white;
     border-bottom-right-radius: 4px;
+  }
+  
+  .shop-ai-message.user a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 500;
   }
 
   .shop-ai-chat-input {

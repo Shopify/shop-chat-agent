@@ -60,6 +60,33 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
+    // Track the current message element
+    let currentMessageElement = null;
+
+    // Helper function to format message content
+    function formatMessageContent(element) {
+      if (!element || !element.dataset.rawText) return;
+
+      const rawText = element.dataset.rawText;
+
+      // Simple markdown link regex
+      const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+
+      // Replace markdown links with HTML links
+      const processedText = rawText.replace(markdownLinkRegex, function(match, text, url) {
+        // If it's a checkout link, replace the text
+        if (url.includes('/cart') || url.includes('checkout')) {
+          return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">click here to proceed to checkout</a>';
+        } else {
+          // For normal links, preserve the original text
+          return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + text + '</a>';
+        }
+      });
+
+      // Apply the formatted HTML
+      element.innerHTML = processedText;
+    }
+
     // Stream the response from the API
     async function streamResponse(userMessage) {
       try {
@@ -91,10 +118,14 @@ document.addEventListener('DOMContentLoaded', function() {
         let messageElement = document.createElement('div');
         messageElement.classList.add('shop-ai-message', 'assistant');
         messageElement.textContent = '';
+        messageElement.dataset.rawText = '';
 
         // Add empty message element that will be populated during streaming
         removeTypingIndicator();
         messagesContainer.appendChild(messageElement);
+
+        // Set as current message
+        currentMessageElement = messageElement;
 
         while (true) {
           const { value, done } = await reader.read();
@@ -118,10 +149,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 else if (data.type === 'chunk') {
                   console.log('chunk', data.chunk);
-                  // Append text chunk to message
-                  messageElement.textContent += data.chunk;
+
+                  // Store raw text in data attribute
+                  messageElement.dataset.rawText += data.chunk;
+
+                  // Show plain text during streaming
+                  messageElement.textContent = messageElement.dataset.rawText;
 
                   // Scroll to bottom as new content arrives
+                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                else if (data.type === 'done') {
+                  // Format the message when it's complete
+                  formatMessageContent(currentMessageElement);
+
+                  // Scroll to ensure visibility after formatting
                   messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
                 else if (data.type === 'error') {
@@ -130,11 +172,18 @@ document.addEventListener('DOMContentLoaded', function() {
                   messageElement.textContent = "Sorry, I couldn't process your request. Please try again later.";
                 }
                 else if (data.type === 'new_message') {
+                  // Format the previous message if needed
+                  formatMessageContent(currentMessageElement);
+
                   // Add a new message element
                   messageElement = document.createElement('div');
                   messageElement.classList.add('shop-ai-message', 'assistant');
                   messageElement.textContent = '';
+                  messageElement.dataset.rawText = '';
                   messagesContainer.appendChild(messageElement);
+
+                  // Update current message reference
+                  currentMessageElement = messageElement;
                 }
               } catch (e) {
                 console.error('Error parsing event data:', e, line);
@@ -152,7 +201,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function addMessage(text, sender) {
       const messageElement = document.createElement('div');
       messageElement.classList.add('shop-ai-message', sender);
-      messageElement.textContent = text;
+
+      // For user messages, just use plain text
+      // For assistant messages, we'd format them too (though currently only used for error messages)
+      if (sender === 'assistant') {
+        messageElement.dataset.rawText = text;
+        formatMessageContent(messageElement);
+      } else {
+        messageElement.textContent = text;
+      }
+
       messagesContainer.appendChild(messageElement);
 
       // Scroll to bottom
