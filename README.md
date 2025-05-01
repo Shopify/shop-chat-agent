@@ -122,8 +122,12 @@ _Steps will be added_
  
 ## Examples to try
 - `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
-- `can you search for snowboards` > will use the `search_products` MCP tool.
+- `can you search for snowboards` > will use the `search_shop_catalog` MCP tool.
 - `add The Videographer Snowboard to my cart` > will use the `add_cart_items` MCP tool and offer a checkout URL.
+- `update my cart to make that 2 items please` > will use the `update_cart_items` MCP tool.
+- `can you tell me what is in my cart` > will use the `get_cart_contents` MCP tool.
+- `what languages is your store available in?` > will use the `search_shop_policies_and_faqs` MCP tool.
+- `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
 - <Sid will come up with ways to test CA tools>
 
 
@@ -157,6 +161,7 @@ For direct testing, point your test suite at the `/chat` endpoint (GET or POST f
 
 ### Editing the prompt
 - Modify [`app/prompts/prompts.json`](./app/prompts/prompts.json) to align the agent’s tone and brand voice.
+- This repo includes 2 prompts, a standard assistant and an enthusiastic assistant. By default, it uses the standard assistant. Go to [chat.jsx](.app/routes/chat.jsx) and set the prompt type to whichever one you like on this line `const promptType = "standardAssistant";` 
 
 ### Changing the UI
 - Use the extension folder: `extensions/chat-bubble/`  
