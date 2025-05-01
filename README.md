@@ -17,7 +17,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - **Streaming Responses**: Streams messages for a natural chat feel.
 
 ### Prerequisites
-1. **Code Editor**: Use your preferred editor (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)) for editing project files.  
+1. **Code Editor**: For editing project files (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)).  
 2. **Node.js**: v18.20 or higher. Download from [nodejs.org](https://nodejs.org/) and install.  
 3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners).  
 4. **Shopify Development Store**: Create a dev store for testing - see the [Development stores guide](https://shopify.dev/docs/api/development-stores). Make sure to add some sample products.  
@@ -113,55 +113,60 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - Enable the toggle<br>
 - Click Save
 
-15. View your store and test your chat application.
- 
+### Configure Customer Accounts
 
+_Steps will be added_
+
+15. View your store and test your chat application.
+
+ 
 ## Examples to try
 - `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
 - `can you search for snowboards` > will use the `search_products` MCP tool.
 - `add The Videographer Snowboard to my cart` > will use the `add_cart_items` MCP tool and offer a checkout URL.
 - <Sid will come up with ways to test CA tools>
 
-## Deployment
 
-Customize this app for your needs by adjusting the prompt and app UI. Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
-
-
-## Architecture
-
+## Architecture and Customizations
 This app consists of two main components:
 
-1. **Backend API**: A Remix app server that handles communication with Claude and processes chat messages
-2. **Chat Bubble UI**: A Shopify theme extension that provides the customer-facing chat interface
+1. **Backend**: A Remix app server that handles communication with Claude, processes chat messages, and acts as an MCP Client.
+2. **Chat Bubble UI**: A Shopify theme extension that provides the customer-facing chat interface.
 
 Running the app will:
-- Start Remix in development mode
-- Tunnel the local server to make it accessible by Shopify
-- Provide a URL to install the app on your development store
+- Start Remix in development mode.
+- Tunnel your local server so Shopify can reach it.
+- Provide a preview URL to install the app on your development store.
 
-## Chat Interface
+For direct testing, you can also connect your test suite to `/chat`. This is the main endpoint for streaming chat messages and it supports both GET and POST requests.
 
-The chat bubble extension is located in `extensions/chat-bubble/`. It connects to the `/chat` endpoint of the app server to stream messages.
+### MCP Tools Integration
+- The app functions as an MCP Client and is aware of Shopify's MCP servers and tools. This allows the LLM to access the Shopify platform.
+- You can find the tools that are initialized in the `app/mcp-client.js` file.
+- Read [our dev docs](https://shopify.dev) to learn more about the Shopify Agent Platform MCP tools.
 
-## MCP Tools Integration
+### Customizations
+Customize this app for your needs by adjusting the prompt, app UI, and LLM used.
 
-The app integrates with Model Context Protocol (MCP) tools, which allows the AI to access additional functionality. These tools are initialized in the `app/mcp-client.js` file.
+#### Editing the prompt
+The `./app/prompts/prompts.json` file currently has a simple prompt which you can customize to better reflect your store brand voice.
 
+#### Changing the UI
+- The chat bubble extension is located in `extensions/chat-bubble/`. It connects to the `/chat` endpoint of the app server to stream messages.
+- The `./extensions/chat-bubble/assets` folder has CSS, JS, icon files so you can customize the look and feel of the chat widget on your store.
 
-## API Endpoints
+#### Using a different LLM
+- This template app uses Claude, but if you want to switch to a different model `add instructions`
 
-- `/chat`: Main endpoint for streaming chat messages, supports both GET and POST requests
-
-
-## Tech Stack
-
+### Tech Stack
 - **Framework**: [Remix](https://remix.run/)
 - **AI**: [Claude by Anthropic](https://www.anthropic.com/claude)
 - **Shopify Integration**: [@shopify/shopify-app-remix](https://www.npmjs.com/package/@shopify/shopify-app-remix)
 - **Database**: SQLite (via Prisma) for session storage
 
-## If you want to use another LLM, here's what you will have to do
+## Deployment
+Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
+
 
 ## Contributing
-
 Please follow the standard Shopify contribution guidelines when making changes to this project.
