@@ -33,8 +33,11 @@
     position: absolute;
     bottom: 80px;
     right: 0;
-    width: 400px;
-    height: 550px;
+    width: 90vw;
+    max-width: 450px;
+    height: 70vh;
+    max-height: 650px;
+    min-height: 350px;
     background-color: white;
     border-radius: 16px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
@@ -45,6 +48,17 @@
     pointer-events: none;
     transform: translateY(20px);
     transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  /* Responsive adjustments for smaller screens */
+  @media (max-width: 480px) {
+    .shop-ai-chat-window {
+      width: 95vw;
+      height: 80vh;
+      right: 10px;
+      left: 10px;
+      bottom: 70px;
+    }
   }
 
   .shop-ai-chat-window.active {
