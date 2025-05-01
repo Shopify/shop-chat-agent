@@ -5,9 +5,9 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 ### MCP Capabilities
 
 - **Product Discovery**: Natural-language search with personalized product recommendations.
-- **Store Information**: Answer questions about policies, shipping, returns, FAQs
+- **Store Information**: Answer questions about policies, shipping, returns, and FAQs.
 - **Cart Management**: Create carts, add or remove items, and complete checkout.
-- **Order Management**: Track order status and process returns
+- **Order Management**: Track order status and process returns.
 
 ### App Features
 - **AI-Powered Chat**: Embedded chat bubble for real-time shopping assistance; swap in your preferred LLM.  
@@ -49,7 +49,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 ### Create your app
 
 4. Start the development server.
-    <br> If prompted, choose the organization this is for in your Terminal.
+    <br> If prompted, choose the organization this is for in your terminal.
    ```shell
    shopify app dev --reset
    ```
@@ -60,7 +60,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    >  (y) Yes, create it as a new app
    ```
 
-6. Hit enter to accept the default name `shop-chat-agent`. All references in code use this name.
+6. Hit enter to accept the default name `shop-chat-agent`. All references in the code use this name.
    ```shell
    ?  App name:
    >  shop-chat-agent
@@ -72,7 +72,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    ✔  your-store
    ```
 
-8. Type in your store password. You can get it from the URL that is in your Terminal.
+8. Type in your store password. You can get it from the URL that is in your terminal.
    ```shell
    ? Incorrect store password ( 
      https://your-store.myshopify.com/admin/online_store/preferences ). Please
@@ -80,7 +80,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    >  *****█________
    ```
 
-   At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your Terminal. You can now proceed to the next step. If you get an error, restart from step 4.
+   At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
 9. Add this config to your `shopify.app.toml` file.
    ```bash
@@ -90,28 +90,28 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    prefix = "apps"
    ```
 
-10. In your Terminal, type `q` to quit, and then restart you dev server, without `--reset` this time.
+10. In your terminal, type `q` to quit, and then restart your dev server, without `--reset` this time.
    ```shell
    shopify app dev
    ```
 
-11. Select yes to automatically update you app's URL.
+11. Select yes to automatically update your app's URL.
    ```shell
    Have Shopify automatically update your app's URL in order to create a preview experience?
    > Yes, automatically update
    ```
 
-### Turn on your app
+### Run your app
 
-12. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your Terminal to open your store in your browser.
+12. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
 
 13. You will now be in the browser and on your store's Admin portal. Install the app.
 
 14. On your Admin portal, navigate to Online Store > Themes
-    > Click Customize button<br>
-    > Click App embeds icon in the sidebar<br>
-    > Enable the toggle<br>
-    > Click Save
+- Click Customize button<br>
+- Click App embeds icon in the sidebar<br>
+- Enable the toggle<br>
+- Click Save
 
 15. View your store and test your chat application.
  
@@ -145,7 +145,7 @@ The chat bubble extension is located in `extensions/chat-bubble/`. It connects t
 
 ## MCP Tools Integration
 
-The app integrates with Model Control Plane (MCP) tools, which allows the AI to access additional functionality. These tools are initialized in the `app/mcp-client.js` file.
+The app integrates with Model Context Protocol (MCP) tools, which allows the AI to access additional functionality. These tools are initialized in the `app/mcp-client.js` file.
 
 
 ### API Endpoints
