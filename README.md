@@ -127,42 +127,50 @@ _Steps will be added_
 - <Sid will come up with ways to test CA tools>
 
 
-## Architecture and Customizations
+## Architecture
+
+### Components
 This app consists of two main components:
 
 1. **Backend**: A Remix app server that handles communication with Claude, processes chat messages, and acts as an MCP Client.
-2. **Chat Bubble UI**: A Shopify theme extension that provides the customer-facing chat interface.
+2. **Chat UI**: A Shopify theme extension that provides the customer-facing chat interface.
 
-Running the app will:
+When you start the app, it will:
 - Start Remix in development mode.
 - Tunnel your local server so Shopify can reach it.
 - Provide a preview URL to install the app on your development store.
 
-For direct testing, you can also connect your test suite to `/chat`. This is the main endpoint for streaming chat messages and it supports both GET and POST requests.
+For direct testing, point your test suite at the `/chat` endpoint (GET or POST for streaming).
 
 ### MCP Tools Integration
-- The app functions as an MCP Client and is aware of Shopify's MCP servers and tools. This allows the LLM to access the Shopify platform.
-- You can find the tools that are initialized in the `app/mcp-client.js` file.
-- Read [our dev docs](https://shopify.dev) to learn more about the Shopify Agent Platform MCP tools.
-
-### Customizations
-Customize this app for your needs by adjusting the prompt, app UI, and LLM used.
-
-#### Editing the prompt
-The `./app/prompts/prompts.json` file currently has a simple prompt which you can customize to better reflect your store brand voice.
-
-#### Changing the UI
-- The chat bubble extension is located in `extensions/chat-bubble/`. It connects to the `/chat` endpoint of the app server to stream messages.
-- The `./extensions/chat-bubble/assets` folder has CSS, JS, icon files so you can customize the look and feel of the chat widget on your store.
-
-#### Using a different LLM
-- This template app uses Claude, but if you want to switch to a different model `add instructions`
+- The backend already initializes all Shopify MCP tools—see [`app/mcp-client.js`](./app/mcp-client.js).  
+- These tools let your LLM invoke product search, cart actions, order lookups, etc.  
+- More in the [Shopify Agent Platform docs](https://shopify.dev).
 
 ### Tech Stack
 - **Framework**: [Remix](https://remix.run/)
 - **AI**: [Claude by Anthropic](https://www.anthropic.com/claude)
 - **Shopify Integration**: [@shopify/shopify-app-remix](https://www.npmjs.com/package/@shopify/shopify-app-remix)
 - **Database**: SQLite (via Prisma) for session storage
+
+## Customizations
+
+### Editing the prompt
+- Modify [`app/prompts/prompts.json`](./app/prompts/prompts.json) to align the agent’s tone and brand voice.
+
+### Changing the UI
+- Use the extension folder: `extensions/chat-bubble/`  
+- The UI streams from `/chat` and renders on your storefront.  
+- You can tweak CSS, JS, and icons under `extensions/chat-bubble/assets/`.
+
+### Swapping out the LLM
+By default this template uses Anthropic’s Claude. To switch to another provider, follow one of these patterns:
+
+- OpenAI Models
+  - Option 1: Use OpenAI's Agent SDK which supports MCP tools. You can find detailed documentation and instructions for integration [here](https://openai.github.io/openai-agents-python/mcp/).
+  - Option 2: Alternatively, you can create a bridge to translate your model calls into MCP tool invocations. This approach requires some custom development but offers flexibility if you need it.
+- Gemini Models: Replace the Anthropic client with the Gemini SDK. You can find detailed documentation and code samples [here](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#use_model_context_protocol_mcp).
+- Other Models: If you would like to use other LLMs that don't yet support MCP, similar to Option 2 for OpenAI, you will need to write a custom adapter to map tool calls to the MCP endpoints.
 
 ## Deployment
 Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
