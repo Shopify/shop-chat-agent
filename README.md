@@ -161,7 +161,7 @@ For direct testing, point your test suite at the `/chat` endpoint (GET or POST f
 
 ### Editing the prompt
 - Modify [`app/prompts/prompts.json`](./app/prompts/prompts.json) to align the agent’s tone and brand voice.
-- This repo includes 2 prompts, a standard assistant and an enthusiastic assistant. By default, it uses the standard assistant. Go to [chat.jsx](.app/routes/chat.jsx) and set the prompt type to whichever one you like on this line `const promptType = "standardAssistant";` 
+- This repo includes 2 prompts, a standard assistant and an enthusiastic assistant. By default, it uses the standard assistant. Go to [chat.jsx](./app/routes/chat.jsx) and set the prompt type to whichever one you like on this line `const promptType = "standardAssistant";` 
 
 ### Changing the UI
 - Use the extension folder: `extensions/chat-bubble/`  
