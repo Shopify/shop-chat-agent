@@ -14,7 +14,7 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "customer_read_customers,customer_write_customers,customer_read_draft_orders,customer_read_orders,customer_read_markets,customer_read_store_credit_accounts,customer_read_store_credit_account_transactions,customer_read_subscription_contracts"
+scopes = ""
 
 [auth]
 redirect_urls = [ "https://shop-chat-agent.com/api/auth" ]
