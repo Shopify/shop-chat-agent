@@ -3,7 +3,7 @@
 client_id = "YOUR_CLIENT_ID"
 name = "shop-chat-agent"
 handle = "shop-chat-agent"
-application_url = "https://example.com"
+application_url = "https://shop-chat-agent.com"
 embedded = true
 
 [build]
@@ -14,10 +14,10 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = ""
+scopes = "customer_read_customers,customer_write_customers,customer_read_draft_orders,customer_read_orders,customer_read_markets,customer_read_store_credit_accounts,customer_read_store_credit_account_transactions,customer_read_subscription_contracts"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://shop-chat-agent.com/api/auth" ]
 
 [pos]
 embedded = false
