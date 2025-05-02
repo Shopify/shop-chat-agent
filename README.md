@@ -49,7 +49,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Create your app
 
-4. Install cli
+4. Install shopify cli (if you don't have it already installed)
    ```shell
    npm install -g @shopify/cli@latest
    ```
