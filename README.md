@@ -40,6 +40,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    npm install
    ```
 
+
 3. Set up environment variables.
    <br>Create a `.env` file with the following:
    ```
@@ -48,31 +49,36 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Create your app
 
-4. Start the development server.
+4. Install cli
+   ```shell
+   npm install -g @shopify/cli@latest
+   ```
+
+5. Start the development server.
     <br> If prompted, choose the organization this is for in your terminal.
    ```shell
    shopify app dev --reset
    ```
 
-5. Select Yes to create this project as a new app.
+6. Select Yes to create this project as a new app.
    ```shell
    ?  Create this project as a new app on Shopify?
    >  (y) Yes, create it as a new app
    ```
 
-6. Hit enter to accept the default name `shop-chat-agent`. All references in the code use this name.
+7. Hit enter to accept the default name `shop-chat-agent`. All references in the code use this name.
    ```shell
    ?  App name:
    >  shop-chat-agent
    ```
 
-7. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
+8. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
    ```shell
    ?  Which store would you like to use to view your project?
    ✔  your-store
    ```
 
-8. Type in your store password. You can get it from the URL that is in your terminal.
+9. Type in your store password. You can get it from the URL that is in your terminal.
    ```shell
    ? Incorrect store password ( 
      https://your-store.myshopify.com/admin/online_store/preferences ). Please
@@ -82,7 +88,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
    At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
-9. Add this config to your `shopify.app.toml` file.
+10. Add this config to your `shopify.app.toml` file.
    ```bash
    [app_proxy]
    url = "https://example.trycloudflare.com"
@@ -90,12 +96,12 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    prefix = "apps"
    ```
 
-10. In your terminal, type `q` to quit, and then restart your dev server, without `--reset` this time.
+11. In your terminal, type `q` to quit, and then restart your dev server, without `--reset` this time.
    ```shell
    shopify app dev
    ```
 
-11. Select yes to automatically update your app's URL.
+12. Select yes to automatically update your app's URL.
    ```shell
    Have Shopify automatically update your app's URL in order to create a preview experience?
    > Yes, automatically update
@@ -103,11 +109,11 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Run your app
 
-12. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
+13. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
 
-13. You will now be in the browser and on your store's Admin portal. Install the app.
+14. You will now be in the browser and on your store's Admin portal. Install the app.
 
-14. On your Admin portal, navigate to Online Store > Themes
+15. On your Admin portal, navigate to Online Store > Themes
 - Click Customize button<br>
 - Click App embeds icon in the sidebar<br>
 - Enable the toggle<br>
@@ -117,7 +123,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 _Steps will be added_
 
-15. View your store and test your chat application.
+16. View your store and test your chat application.
 
  
 ## Examples to try
