@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Process the text with various Markdown features
       let processedText = rawText;
-      
+
       // 1. Process Markdown links
       const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
       processedText = processedText.replace(markdownLinkRegex, function(match, text, url) {
@@ -114,37 +114,37 @@ document.addEventListener('DOMContentLoaded', function() {
           return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + text + '</a>';
         }
       });
-      
+
       // 2. Process lists - this needs to be done before applying the HTML
-      
+
       // Convert text to HTML with proper list handling
       processedText = convertMarkdownToHtml(processedText);
-      
+
       // Apply the formatted HTML
       element.innerHTML = processedText;
     }
-    
+
     // Function to convert Markdown text to HTML with list support
     function convertMarkdownToHtml(text) {
       // First, handle bold text (**text** or __text__)
       text = text.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
-      
+
       // First, split the text by newlines to process line by line
       const lines = text.split('\n');
       let currentList = null;  // 'ol' or 'ul' or null
       let listItems = [];
       let htmlContent = '';
-      
+
       // Process each line
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        
+
         // Check for unordered list item (- item or * item)
         const unorderedMatch = line.match(/^\s*([-*])\s+(.*)/);
-        
+
         // Check for ordered list item (1. item, 2. item, etc.)
         const orderedMatch = line.match(/^\s*(\d+)[\.)]\s+(.*)/);
-        
+
         if (unorderedMatch) {
           // Handle unordered list items
           if (currentList !== 'ul') {
@@ -155,10 +155,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             currentList = 'ul';
           }
-          
+
           // Add item to the current unordered list
           listItems.push('<li>' + unorderedMatch[2] + '</li>');
-        } 
+        }
         else if (orderedMatch) {
           // Handle ordered list items
           if (currentList !== 'ol') {
@@ -169,20 +169,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             currentList = 'ol';
           }
-          
+
           // Add item to the current ordered list
           listItems.push('<li>' + orderedMatch[2] + '</li>');
-        } 
+        }
         else {
           // Not a list item - finish any current list
           if (currentList) {
-            htmlContent += currentList === 'ul' 
-              ? '<ul>' + listItems.join('') + '</ul>' 
+            htmlContent += currentList === 'ul'
+              ? '<ul>' + listItems.join('') + '</ul>'
               : '<ol>' + listItems.join('') + '</ol>';
             listItems = [];
             currentList = null;
           }
-          
+
           // Handle paragraph
           if (line.trim() === '') {
             htmlContent += '<br>';
@@ -191,17 +191,17 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
       }
-      
+
       // Close any remaining open list
       if (currentList) {
-        htmlContent += currentList === 'ul' 
-          ? '<ul>' + listItems.join('') + '</ul>' 
+        htmlContent += currentList === 'ul'
+          ? '<ul>' + listItems.join('') + '</ul>'
           : '<ol>' + listItems.join('') + '</ol>';
       }
-      
+
       // Handle paragraph breaks without using <br> tags
       htmlContent = htmlContent.replace(/<\/p><p>/g, '</p>\n<p>');
-      
+
       return htmlContent;
     }
 
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Set up event source for streaming
         // TODO: Make this dynamic, maybe via app proxy?
-        const streamUrl = `/apps/chat/chat`;
+        const streamUrl = 'https://localhost:3458/chat';
 
         const response = await fetch(streamUrl, {
           method: 'POST',

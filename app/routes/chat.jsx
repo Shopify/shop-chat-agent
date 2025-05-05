@@ -9,12 +9,16 @@ const conversations = new Map();
 // This route is now API-only. Only requests with Accept: text/event-stream are supported.
 export async function loader({ request }) {
   if (request.method === "OPTIONS") {
+    // Allow cross-origin requests from any origin
+    const origin = request.headers.get("Origin") || "*";
     return new Response(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Accept",
+        "Access-Control-Allow-Headers": "Content-Type, Accept, Customer-Access-Token",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400" // 24 hours
       },
     });
   }
@@ -29,14 +33,15 @@ export async function loader({ request }) {
 // Common handler for chat requests (both GET and POST)
 async function handleChatRequest(request) {
   // Set headers for SSE and CORS
+  const origin = request.headers.get("Origin") || "*";
   const headers = {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     "Connection": "keep-alive",
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
-    "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+    "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Customer-Access-Token"
   };
 
   try {
