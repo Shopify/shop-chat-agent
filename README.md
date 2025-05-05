@@ -43,7 +43,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 
 3. Set up environment variables.
-   <br>Create a `.env` file with the following:
+   <br>Rename the `.env.example` file to `.env` and make sure it has your Claude API key:
    ```
    CLAUDE_API_KEY=your_claude_api_key
    ```
