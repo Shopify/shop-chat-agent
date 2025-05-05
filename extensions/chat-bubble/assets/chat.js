@@ -5,8 +5,6 @@ window.addEventListener('message', function(event) {
 
   // Check if the message is from our authentication flow
   if (event.data && event.data.type === 'authentication_success') {
-    console.log('Authentication success message received with token:', event.data.access_token);
-
     try {
       // Store the access token
       sessionStorage.setItem('shopAiCustomerAccessToken', event.data.access_token);
@@ -191,8 +189,6 @@ document.addEventListener('DOMContentLoaded', function() {
                   }
                 }
                 else if (data.type === 'chunk') {
-                  console.log('chunk', data.chunk);
-
                   // Store raw text in data attribute
                   messageElement.dataset.rawText += data.chunk;
 

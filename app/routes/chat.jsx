@@ -139,7 +139,6 @@ async function handleChatRequest(request) {
                 const toolArgs = content.input;
                 const toolUseId = content.id;
                 const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
-                console.log("Tool use response", toolUseResponse);
 
                 // TODO: Move this to error handling below
                 // Check if this is an auth error response
@@ -161,6 +160,7 @@ async function handleChatRequest(request) {
                     }]
                   });
                 } else if (toolUseResponse.error) {
+                  console.log("Tool use error", toolUseResponse.error);
                   // TODO: Handle other tool errors
                   conversationHistory.push({
                     role: 'user',
