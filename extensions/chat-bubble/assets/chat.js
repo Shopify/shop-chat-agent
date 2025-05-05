@@ -100,11 +100,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const rawText = element.dataset.rawText;
 
-      // Simple markdown link regex
+      // Process the text with various Markdown features
+      let processedText = rawText;
+      
+      // 1. Process Markdown links
       const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-
-      // Replace markdown links with HTML links
-      const processedText = rawText.replace(markdownLinkRegex, function(match, text, url) {
+      processedText = processedText.replace(markdownLinkRegex, function(match, text, url) {
         // If it's a checkout link, replace the text
         if (url.includes('/cart') || url.includes('checkout')) {
           return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">click here to proceed to checkout</a>';
@@ -113,9 +114,95 @@ document.addEventListener('DOMContentLoaded', function() {
           return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + text + '</a>';
         }
       });
-
+      
+      // 2. Process lists - this needs to be done before applying the HTML
+      
+      // Convert text to HTML with proper list handling
+      processedText = convertMarkdownToHtml(processedText);
+      
       // Apply the formatted HTML
       element.innerHTML = processedText;
+    }
+    
+    // Function to convert Markdown text to HTML with list support
+    function convertMarkdownToHtml(text) {
+      // First, handle bold text (**text** or __text__)
+      text = text.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+      
+      // First, split the text by newlines to process line by line
+      const lines = text.split('\n');
+      let currentList = null;  // 'ol' or 'ul' or null
+      let listItems = [];
+      let htmlContent = '';
+      
+      // Process each line
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Check for unordered list item (- item or * item)
+        const unorderedMatch = line.match(/^\s*([-*])\s+(.*)/);
+        
+        // Check for ordered list item (1. item, 2. item, etc.)
+        const orderedMatch = line.match(/^\s*(\d+)[\.)]\s+(.*)/);
+        
+        if (unorderedMatch) {
+          // Handle unordered list items
+          if (currentList !== 'ul') {
+            // First finish any current list
+            if (currentList === 'ol') {
+              htmlContent += '<ol>' + listItems.join('') + '</ol>';
+              listItems = [];
+            }
+            currentList = 'ul';
+          }
+          
+          // Add item to the current unordered list
+          listItems.push('<li>' + unorderedMatch[2] + '</li>');
+        } 
+        else if (orderedMatch) {
+          // Handle ordered list items
+          if (currentList !== 'ol') {
+            // First finish any current list
+            if (currentList === 'ul') {
+              htmlContent += '<ul>' + listItems.join('') + '</ul>';
+              listItems = [];
+            }
+            currentList = 'ol';
+          }
+          
+          // Add item to the current ordered list
+          listItems.push('<li>' + orderedMatch[2] + '</li>');
+        } 
+        else {
+          // Not a list item - finish any current list
+          if (currentList) {
+            htmlContent += currentList === 'ul' 
+              ? '<ul>' + listItems.join('') + '</ul>' 
+              : '<ol>' + listItems.join('') + '</ol>';
+            listItems = [];
+            currentList = null;
+          }
+          
+          // Handle paragraph
+          if (line.trim() === '') {
+            htmlContent += '<br>';
+          } else {
+            htmlContent += '<p>' + line + '</p>';
+          }
+        }
+      }
+      
+      // Close any remaining open list
+      if (currentList) {
+        htmlContent += currentList === 'ul' 
+          ? '<ul>' + listItems.join('') + '</ul>' 
+          : '<ol>' + listItems.join('') + '</ol>';
+      }
+      
+      // Handle paragraph breaks without using <br> tags
+      htmlContent = htmlContent.replace(/<\/p><p>/g, '</p>\n<p>');
+      
+      return htmlContent;
     }
 
     // Stream the response from the API

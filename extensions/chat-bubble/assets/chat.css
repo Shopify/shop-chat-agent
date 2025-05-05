@@ -122,6 +122,41 @@
   .shop-ai-message.assistant a:hover {
     opacity: 0.8;
   }
+  
+  /* List styling for assistant messages */
+  .shop-ai-message.assistant ul,
+  .shop-ai-message.assistant ol {
+    margin: 8px 0;
+    padding-left: 24px;
+  }
+  
+  .shop-ai-message.assistant li {
+    margin-bottom: 6px;
+  }
+  
+  .shop-ai-message.assistant li:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Nested list styling */
+  .shop-ai-message.assistant li > ul,
+  .shop-ai-message.assistant li > ol {
+    margin-top: 6px;
+  }
+  
+  /* Paragraph styling */
+  .shop-ai-message.assistant p {
+    margin: 0 0 10px 0;
+  }
+  
+  .shop-ai-message.assistant p:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Bold text styling */
+  .shop-ai-message.assistant strong {
+    font-weight: 600;
+  }
 
   .shop-ai-message.user {
     align-self: flex-end;
