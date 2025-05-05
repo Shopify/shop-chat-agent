@@ -58,7 +58,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 5. Start the development server.
     <br> If prompted, choose the organization this is for in your terminal.
    ```shell
-   shopify app dev --reset
+   shopify app dev --use-localhost --reset
    ```
 
 6. Select Yes to create this project as a new app.
@@ -101,20 +101,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
    At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
-10. Add this config to your `shopify.app.toml` file. If this config already exists then you don't need to perform these steps.
-   ```bash
-   [app_proxy]
-   url = "https://example.trycloudflare.com"
-   subpath = "chat"
-   prefix = "apps"
-   ```
-
-11. In your terminal, type `q` to quit, and then restart your dev server, without `--reset` this time.
-   ```shell
-   shopify app dev
-   ```
-
-12. Select yes to automatically update your app's URL.
+10. Select yes to automatically update your app's URL.
    ```shell
    Have Shopify automatically update your app's URL in order to create a preview experience?
    > Yes, automatically update
@@ -122,11 +109,11 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Run your app
 
-13. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
+11. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
 
-14. You will now be in the browser and on your store's Admin portal. Install the app.
+12. You will now be in the browser and on your store's Admin portal. Install the app.
 
-15. On your Admin portal, navigate to Online Store > Themes
+13. On your Admin portal, navigate to Online Store > Themes
 - Click Customize button<br>
 - Click App embeds icon in the sidebar<br>
 - Enable the toggle<br>
@@ -136,7 +123,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 _Steps will be added_
 
-16. View your store and test your chat application.
+14. View your store and test your chat application.
 
 
 ## Examples to try
