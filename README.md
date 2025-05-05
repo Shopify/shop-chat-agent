@@ -10,19 +10,20 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - **Order Management**: Track order status and process returns.
 
 ### App Features
-- **AI-Powered Chat**: Embedded chat bubble for real-time shopping assistance; swap in your preferred LLM.  
-- **Built-In MCP Client**: Ready to call Shopify’s MCP tools (e.g. search, cart, order); easily add more servers.  
-- **Persistent Context**: Remembers past messages to keep conversations coherent.  
-- **Custom Chat UI**: A theme extension you can style to match your store.  
+- **AI-Powered Chat**: Embedded chat bubble for real-time shopping assistance; swap in your preferred LLM.
+- **Built-In MCP Client**: Ready to call Shopify’s MCP tools (e.g. search, cart, order); easily add more servers.
+- **Persistent Context**: Remembers past messages to keep conversations coherent.
+- **Custom Chat UI**: A theme extension you can style to match your store.
 - **Streaming Responses**: Streams messages for a natural chat feel.
 
 ### Prerequisites
-1. **Code Editor**: For editing project files (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)).  
-2. **Node.js**: v18.20 or higher. Download from [nodejs.org](https://nodejs.org/) and install.  
-3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners).  
-4. **Shopify Development Store**: Create a dev store for testing - see the [Development stores guide](https://shopify.dev/docs/api/development-stores). Make sure to add some sample products.  
-5. **Anthropic API Key**: Generate a key in the [Anthropic Console](https://console.anthropic.com/) and store it securely. This template uses Claude, but you can swap in any LLM by updating the code.  
-6. *_Register your app on the new Shopify Developer Platform to enable Customer Accounts (steps TBD)._*
+1. **Code Editor**: For editing project files (e.g., [Cursor](https://www.cursor.com/en/downloads), [VS Code](https://code.visualstudio.com/download)).
+2. **Node.js**: v18.20 or higher. Download from [nodejs.org](https://nodejs.org/) and install.
+3. **Shopify Partner Account**: Sign up at [shopify.com/partners](https://www.shopify.com/partners).
+4. **Shopify Development Store**: Create a dev store for testing - see the [Development stores guide](https://shopify.dev/docs/api/development-stores). Make sure to add some sample products.
+5. **Anthropic API Key**: Generate a key in the [Anthropic Console](https://console.anthropic.com/) and store it securely. This template uses Claude, but you can swap in any LLM by updating the code.
+6. **Shopify CLI**: v3.79.0 or higher. Installation instructions can be found in the [dev docs](https://shopify.dev/docs/api/shopify-cli)
+7. *_Register your app on the new Shopify Developer Platform to enable Customer Accounts (steps TBD)._*
 
 
 ## Getting Started
@@ -49,7 +50,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Create your app
 
-4. Install shopify cli (if you don't have it already installed)
+4. Install the latest shopify cli (vv3.79.0 or higher)
    ```shell
    npm install -g @shopify/cli@latest
    ```
@@ -72,6 +73,18 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    >  shop-chat-agent
    ```
 
+8. If prompted, select the default configuration file name.
+   ```shell
+   ?  Configuration file name:
+   ✔  shop-chat-agent
+   ```
+
+9. If prompted, select no and overwrite your existing configutation file.
+   ```shell
+   ?  Configuration file shopify.app.shop-chat-agent.toml already exists. Do you want to choose a different configuration name?
+   ✔  No, overwrite my existing configuration file
+   ```
+
 8. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
    ```shell
    ?  Which store would you like to use to view your project?
@@ -80,7 +93,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 9. Type in your store password. You can get it from the URL that is in your terminal.
    ```shell
-   ? Incorrect store password ( 
+   ? Incorrect store password (
      https://your-store.myshopify.com/admin/online_store/preferences ). Please
       try again:
    >  *****█________
@@ -88,7 +101,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
    At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
-10. Add this config to your `shopify.app.toml` file.
+10. Add this config to your `shopify.app.toml` file. If this config already exists then you don't need to perform these steps.
    ```bash
    [app_proxy]
    url = "https://example.trycloudflare.com"
@@ -125,7 +138,7 @@ _Steps will be added_
 
 16. View your store and test your chat application.
 
- 
+
 ## Examples to try
 - `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
 - `can you search for snowboards` > will use the `search_shop_catalog` MCP tool.
@@ -153,8 +166,8 @@ When you start the app, it will:
 For direct testing, point your test suite at the `/chat` endpoint (GET or POST for streaming).
 
 ### MCP Tools Integration
-- The backend already initializes all Shopify MCP tools—see [`app/mcp-client.js`](./app/mcp-client.js).  
-- These tools let your LLM invoke product search, cart actions, order lookups, etc.  
+- The backend already initializes all Shopify MCP tools—see [`app/mcp-client.js`](./app/mcp-client.js).
+- These tools let your LLM invoke product search, cart actions, order lookups, etc.
 - More in the [Shopify Agent Platform docs](https://shopify.dev).
 
 ### Tech Stack
@@ -167,11 +180,11 @@ For direct testing, point your test suite at the `/chat` endpoint (GET or POST f
 
 ### Editing the prompt
 - Modify [`app/prompts/prompts.json`](./app/prompts/prompts.json) to align the agent’s tone and brand voice.
-- This repo includes 2 prompts, a standard assistant and an enthusiastic assistant. By default, it uses the standard assistant. Go to [chat.jsx](./app/routes/chat.jsx) and set the prompt type to whichever one you like on this line `const promptType = "standardAssistant";` 
+- This repo includes 2 prompts, a standard assistant and an enthusiastic assistant. By default, it uses the standard assistant. Go to [chat.jsx](./app/routes/chat.jsx) and set the prompt type to whichever one you like on this line `const promptType = "standardAssistant";`
 
 ### Changing the UI
-- Use the extension folder: `extensions/chat-bubble/`  
-- The UI streams from `/chat` and renders on your storefront.  
+- Use the extension folder: `extensions/chat-bubble/`
+- The UI streams from `/chat` and renders on your storefront.
 - You can tweak CSS, JS, and icons under `extensions/chat-bubble/assets/`.
 
 ### Swapping out the LLM

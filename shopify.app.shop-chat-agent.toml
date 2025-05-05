@@ -21,3 +21,4 @@ redirect_urls = [ "https://shop-chat-agent.com/api/auth" ]
 
 [pos]
 embedded = false
+
