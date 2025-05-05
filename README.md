@@ -101,6 +101,12 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
    At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
+10. Use mkcert to generate a certifacte for you localhost
+   ```shell
+   ?  --use-localhost requires a certificate for `localhost`. Generate it now?
+   >  Yes, use mkcert to generate it
+   ```
+
 10. Select yes to automatically update your app's URL.
    ```shell
    Have Shopify automatically update your app's URL in order to create a preview experience?
