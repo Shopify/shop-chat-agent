@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Get prompt type from window config or use default
         const promptType = window.shopChatConfig?.promptType || "standardAssistant";
-        
+
         // Prepare the request body
         const requestBody = JSON.stringify({
           message: userMessage,
@@ -291,11 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Get welcome message from block settings or use default
-    let welcomeMessage = "👋 Hi there! How can I help you today?";
-    const blockElement = document.querySelector('[data-shopify-editor-block]');
-    if (blockElement && blockElement.dataset.welcomeMessage) {
-      welcomeMessage = blockElement.dataset.welcomeMessage;
-    }
+    const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
 
     // Add the welcome message
     addMessage(welcomeMessage, 'assistant');
