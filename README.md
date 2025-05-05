@@ -85,13 +85,13 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    ✔  No, overwrite my existing configuration file
    ```
 
-8. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
+10. If prompted, select the store you would like to use - note it **must** be a development store (see [Prerequisites](#prerequisites)).
    ```shell
    ?  Which store would you like to use to view your project?
    ✔  your-store
    ```
 
-9. Type in your store password. You can get it from the URL that is in your terminal.
+11. Type in your store password. You can get it from the URL that is in your terminal.
    ```shell
    ? Incorrect store password (
      https://your-store.myshopify.com/admin/online_store/preferences ). Please
@@ -101,13 +101,13 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
    At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
-10. Use mkcert to generate a certifacte for you localhost
+12. Use mkcert to generate a certifacte for you localhost
    ```shell
    ?  --use-localhost requires a certificate for `localhost`. Generate it now?
    >  Yes, use mkcert to generate it
    ```
 
-10. Select yes to automatically update your app's URL.
+13. Select yes to automatically update your app's URL.
    ```shell
    Have Shopify automatically update your app's URL in order to create a preview experience?
    > Yes, automatically update
@@ -115,11 +115,11 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Run your app
 
-11. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
+14. Follow the  `Preview URL: https://your-store.myshopify.com/...` in your terminal to open your store in your browser.
 
-12. You will now be in the browser and on your store's Admin portal. Install the app.
+15. You will now be in the browser and on your store's Admin portal. Install the app.
 
-13. On your Admin portal, navigate to Online Store > Themes
+16. On your Admin portal, navigate to Online Store > Themes
 - Click Customize button<br>
 - Click App embeds icon in the sidebar<br>
 - Enable the toggle<br>
@@ -129,7 +129,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 _Steps will be added_
 
-14. View your store and test your chat application.
+17. View your store and test your chat application.
 
 
 ## Examples to try
