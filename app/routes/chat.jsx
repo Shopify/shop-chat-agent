@@ -99,9 +99,8 @@ async function handleChatRequest(request) {
           let userMessage = { role: 'user', content: message };
           conversationHistory.push(userMessage);
 
-          // Get system prompt from JSON file
-          // You can easily switch between different prompts by changing which one is used here
-          const promptType = "standardAssistant"; // Can be changed to "enthusiasticAssistant" or others
+          // Get system prompt from request or use default
+          const promptType = body.prompt_type || "standardAssistant";
           const systemInstruction = systemPrompts.systemPrompts[promptType].content;
 
           sendMessage({ type: 'id', conversation_id: conversation_id });

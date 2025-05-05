@@ -121,10 +121,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Stream the response from the API
     async function streamResponse(userMessage, conversationId, customerAccessToken) {
       try {
+        // Get prompt type from window config or use default
+        const promptType = window.shopChatConfig?.promptType || "standardAssistant";
+        
         // Prepare the request body
         const requestBody = JSON.stringify({
           message: userMessage,
           conversation_id: conversationId,
+          prompt_type: promptType
         });
 
         // Set up event source for streaming

@@ -30,6 +30,11 @@
 </div>
 
 <script src="{{ 'chat.js' | asset_url }}" defer></script>
+<script>
+  window.shopChatConfig = {
+    promptType: {{ block.settings.system_prompt | json }}
+  };
+</script>
 
 {% schema %}
 {
@@ -47,6 +52,22 @@
       "id": "welcome_message",
       "label": "Welcome Message",
       "default": "👋 Hi there! How can I help you today?"
+    },
+    {
+      "type": "select",
+      "id": "system_prompt",
+      "label": "System Prompt",
+      "options": [
+        {
+          "value": "standardAssistant",
+          "label": "Standard Assistant"
+        },
+        {
+          "value": "enthusiasticAssistant",
+          "label": "Enthusiastic Assistant"
+        }
+      ],
+      "default": "standardAssistant"
     }
   ]
 }
