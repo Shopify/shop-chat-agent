@@ -39,7 +39,7 @@ if (host === "localhost") {
 
 export default defineConfig({
   server: {
-    allowedHosts: [host],
+    allowedHosts: [host, "largely-liked-killdeer.ngrok-free.app"],
     cors: {
       preflightContinue: true,
     },
