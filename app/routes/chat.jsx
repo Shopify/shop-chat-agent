@@ -93,6 +93,7 @@ async function handleChatRequest(request) {
 
           // Get or create conversation history
           let conversationHistory = [];
+          let productsToDisplay = [];
           if (conversation_id && conversations.has(conversation_id)) {
             conversationHistory = conversations.get(conversation_id);
           }
@@ -129,6 +130,14 @@ async function handleChatRequest(request) {
                 conversationHistory.push({role: message.role, content: [content]});
               }
 
+              // Send product results if available
+              if (productsToDisplay.length > 0) {
+                sendMessage({
+                  type: 'product_results',
+                  products: productsToDisplay
+                });
+              }
+
               // Send a completion message
               sendMessage({ type: 'done' });
             });
@@ -144,7 +153,7 @@ async function handleChatRequest(request) {
                 if (toolUseResponse.error) {
                   await handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage);
                 } else {
-                  await handleToolSuccess(toolUseResponse, toolUseId, conversationHistory, sendMessage);
+                  await handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay);
                 }
 
                 sendMessage({ type: 'new_message' });
@@ -180,7 +189,13 @@ async function handleToolError(toolUseResponse, toolName, toolUseId, conversatio
   }
 }
 
-async function handleToolSuccess(toolUseResponse, toolUseId, conversationHistory, sendMessage) {
+async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay) {
+  // Check if this is a product search result
+  if (toolName === "search_shop_catalog") {
+    productsToDisplay.push(...processProductSearchResult(toolUseResponse))
+  }
+
+  // Continue with normal tool result processing
   for (const content of toolUseResponse.content) {
     const toolUseResponseMessage = {
       role: 'user',
@@ -191,6 +206,49 @@ async function handleToolSuccess(toolUseResponse, toolUseId, conversationHistory
       }]
     };
     conversationHistory.push(toolUseResponseMessage);
+  }
+}
+
+// Helper function to process product search results
+function processProductSearchResult(toolUseResponse) {
+  try {
+    console.log("Processing product search result");
+    let products = [];
+    if (toolUseResponse.content && toolUseResponse.content.length > 0) {
+      const content = toolUseResponse.content[0].text;
+      try {
+        let responseData;
+        if (typeof content === 'object') {
+          responseData = content;
+        } else if (typeof content === 'string') {
+          responseData = JSON.parse(content);
+        }
+        if (responseData && responseData.products && Array.isArray(responseData.products)) {
+          products = responseData.products.slice(0, 3).map(product => {
+            const price = product.price_range
+              ? `${product.price_range.currency} ${product.price_range.min}`
+              : (product.variants && product.variants.length > 0
+                  ? `${product.variants[0].currency} ${product.variants[0].price}`
+                  : 'Price not available');
+            return {
+              id: product.product_id || `product-${Math.random().toString(36).substring(7)}`,
+              title: product.title || 'Product',
+              price: price,
+              image_url: product.image_url || '',
+              description: product.description || '',
+              url: product.url || ''
+            };
+          });
+          console.log(`Found ${products.length} products to display`);
+        }
+      } catch (e) {
+        console.error("Error parsing product data:", e);
+      }
+    }
+
+    return products;
+  } catch (error) {
+    console.error("Error processing product search results:", error);
   }
 }
 
