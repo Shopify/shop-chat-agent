@@ -93,6 +93,7 @@ async function handleChatRequest(request) {
 
           // Get or create conversation history
           let conversationHistory = [];
+          let productsToDisplay = [];
           if (conversation_id && conversations.has(conversation_id)) {
             conversationHistory = conversations.get(conversation_id);
           }
@@ -128,6 +129,15 @@ async function handleChatRequest(request) {
               for (const content of message.content) {
                 conversationHistory.push({role: message.role, content: [content]});
               }
+
+              // Send product results if available
+              if (productsToDisplay.length > 0) {
+                sendMessage({
+                  type: 'product_results',
+                  products: productsToDisplay
+                });
+              }
+
               // Send a completion message
               sendMessage({ type: 'done' });
             });
@@ -143,7 +153,7 @@ async function handleChatRequest(request) {
                 if (toolUseResponse.error) {
                   await handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage);
                 } else {
-                  await handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage);
+                  await handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay);
                 }
 
                 sendMessage({ type: 'new_message' });
@@ -179,10 +189,10 @@ async function handleToolError(toolUseResponse, toolName, toolUseId, conversatio
   }
 }
 
-async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage) {
+async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay) {
   // Check if this is a product search result
   if (toolName === "search_shop_catalog") {
-    processProductSearchResult(toolUseResponse, sendMessage);
+    productsToDisplay.push(...processProductSearchResult(toolUseResponse))
   }
 
   // Continue with normal tool result processing
@@ -200,7 +210,7 @@ async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversat
 }
 
 // Helper function to process product search results
-function processProductSearchResult(toolUseResponse, sendMessage) {
+function processProductSearchResult(toolUseResponse) {
   try {
     console.log("Processing product search result");
     let products = [];
@@ -235,13 +245,8 @@ function processProductSearchResult(toolUseResponse, sendMessage) {
         console.error("Error parsing product data:", e);
       }
     }
-    if (products.length > 0) {
-      console.log("Sending products to display:", products);
-      sendMessage({
-        type: 'product_results',
-        products: products
-      });
-    }
+
+    return products;
   } catch (error) {
     console.error("Error processing product search results:", error);
   }
