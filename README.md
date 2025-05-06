@@ -73,15 +73,15 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    >  shop-chat-agent
    ```
 
-8. If prompted, select the default configuration file name.
+8. If prompted, keep the configuration file name blank.
    ```shell
    ?  Configuration file name:
-   ✔  shop-chat-agent
+   ✔  (empty)
    ```
 
 9. If prompted, select no and overwrite your existing configutation file.
    ```shell
-   ?  Configuration file shopify.app.shop-chat-agent.toml already exists. Do you want to choose a different configuration name?
+   ?  Configuration file shopify.app.toml already exists. Do you want to choose a different configuration name?
    ✔  No, overwrite my existing configuration file
    ```
 
