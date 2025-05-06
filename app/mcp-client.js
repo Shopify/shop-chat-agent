@@ -1,4 +1,5 @@
 import { generateAuthUrl } from "./auth.server";
+import { getCustomerToken } from "./db.server";
 
 class MCPClient {
   constructor(hostUrl, conversationId) {
@@ -23,14 +24,26 @@ class MCPClient {
     };
   }
 
-  async connectToCustomerServer(customerAccessToken) {
+  async connectToCustomerServer() {
     try {
       console.log(`Connecting to MCP server at ${this.customerMcpEndpoint}`);
-      this.customerAccessToken = customerAccessToken;
+
+      if (this.conversationId) {
+        const dbToken = await getCustomerToken(this.conversationId);
+
+        if (dbToken && dbToken.accessToken) {
+          this.customerAccessToken = dbToken.accessToken;
+        } else {
+          console.log("No token in database for conversation:", this.conversationId);
+        }
+      }
+
+      // If we still don't have a token, we'll connect without one
+      // and tools that require auth will prompt for it later
 
       const headers = {
         "Content-Type": "application/json",
-        "Authorization": this.customerAccessToken
+        "Authorization": this.customerAccessToken || ""
       };
 
       // Make a direct request to get available tools
@@ -157,9 +170,23 @@ class MCPClient {
 
   async callCustomerTool(toolName, toolArgs) {
     try {
+      // First try to get a token from the database for this conversation
+      let accessToken = this.customerAccessToken;
+
+      if (!accessToken || accessToken === "") {
+        const dbToken = await getCustomerToken(this.conversationId);
+
+        if (dbToken && dbToken.accessToken) {
+          accessToken = dbToken.accessToken;
+          this.customerAccessToken = accessToken; // Store it for later use
+        } else {
+          console.log("No token in database for conversation:", this.conversationId);
+        }
+      }
+
       const headers = {
         "Content-Type": "application/json",
-        "Authorization": this.customerAccessToken
+        "Authorization": accessToken
       };
 
       const response = await fetch(`${this.customerMcpEndpoint}`, {
@@ -184,9 +211,10 @@ class MCPClient {
 
         // Instead of retrying, return the auth URL for the front-end
         return {
-          error: "authorization_required",
-          auth_url: authResponse.url,
-          text: `You need to authorize the app to access your customer data. [Click here to authorize](${authResponse.url})`
+          error: {
+            type: "auth_required",
+            data: `You need to authorize the app to access your customer data. [Click here to authorize](${authResponse.url})`
+          }
         };
       }
 

@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { getCodeVerifier } from "../db.server";
+import { getCodeVerifier, storeCustomerToken } from "../db.server";
 
 /**
  * Handle OAuth callback from Shopify Customer API
@@ -17,6 +17,26 @@ export async function loader({ request }) {
     // Exchange code for access token, passing both code and state
     const tokenResponse = await exchangeCodeForToken(code, state);
 
+    // Store token in database
+    try {
+      // Calculate expiration date based on expires_in (seconds)
+      const expiresAt = new Date();
+      expiresAt.setSeconds(expiresAt.getSeconds() + tokenResponse.expires_in);
+
+      // Store in database with conversation ID from state
+      await storeCustomerToken(
+        state,
+        tokenResponse.access_token,
+        tokenResponse.refresh_token || null,
+        expiresAt
+      );
+
+      console.log('Stored customer token in database for conversation:', state);
+    } catch (error) {
+      console.error('Failed to store token in database:', error);
+      // Continue anyway to not disrupt user flow
+    }
+
     // Instead of redirecting, return HTML that auto-closes the tab
     return new Response(`
       <!DOCTYPE html>
@@ -25,50 +45,6 @@ export async function loader({ request }) {
         <title>Authentication Successful</title>
         <script>
           window.onload = function() {
-            console.log('Authentication successful, storing in localStorage');
-
-            // Store in localStorage as a backup method
-            try {
-              const tokenData = {
-                access_token: '${tokenResponse.access_token}',
-                expires_in: ${tokenResponse.expires_in},
-                timestamp: Date.now()
-              };
-              localStorage.setItem('shopAiAuthData', JSON.stringify(tokenData));
-              console.log('Stored auth data in localStorage');
-
-              // Try to create an iframe to the parent domain to share the token
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = '/';
-              iframe.onload = function() {
-                try {
-                  iframe.contentWindow.sessionStorage.setItem('shopAiCustomerAccessToken', '${tokenResponse.access_token}');
-                  console.log('Set token via iframe');
-                } catch(e) {
-                  console.error('Could not set via iframe:', e);
-                }
-              };
-              document.body.appendChild(iframe);
-            } catch (e) {
-              console.error('Failed to store in localStorage:', e);
-            }
-
-            // Use postMessage as well
-            if (window.opener) {
-              console.log('Window opener exists, sending postMessage');
-              const message = {
-                type: 'authentication_success',
-                access_token: '${tokenResponse.access_token}',
-                expires_in: ${tokenResponse.expires_in}
-              };
-              console.log('Message payload:', JSON.stringify(message));
-              window.opener.postMessage(message, '*');
-              console.log('Message sent to parent window');
-            } else {
-              console.log('No window.opener found - opened in same window?');
-            }
-
             // Show success message briefly before closing
             document.getElementById('message').style.display = 'block';
             // Close the tab after a short delay
@@ -76,7 +52,7 @@ export async function loader({ request }) {
               window.close();
               // In case window.close() doesn't work (common in some browsers)
               document.getElementById('fallback').style.display = 'block';
-            }, 3500);
+            }, 1500);
           }
         </script>
         <style>
@@ -121,7 +97,7 @@ async function exchangeCodeForToken(code, state) {
     throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
   }
 
-  const redirectUri = `${process.env.REDIRECT_URL || "https://largely-liked-killdeer.ngrok-free.app"}/auth/callback`;
+  const redirectUri = `${process.env.REDIRECT_URL}/auth/callback`;
 
   // Correct token URL format
   const tokenUrl = `https://shopify.com/authentication/${shopId}/oauth/token`;

@@ -16,7 +16,7 @@ export async function loader({ request }) {
       headers: {
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Accept, Customer-Access-Token",
+        "Access-Control-Allow-Headers": "Content-Type, Accept",
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Max-Age": "86400" // 24 hours
       },
@@ -41,7 +41,7 @@ async function handleChatRequest(request) {
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
-    "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Customer-Access-Token"
+    "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
   };
 
   try {
@@ -79,14 +79,11 @@ async function handleChatRequest(request) {
           // Initialize MCP client
           const mcpClient = new MCPClient(request.headers.get("origin"), conversation_id);
 
-          // Get customer token from request header if available
-          const customerAccessToken = request.headers.get("Customer-Access-Token");
-
 
           try {
             // Connect to MCP server and get available tools
             const storefrontMcpTools = await mcpClient.connectToStorefrontServer();
-            const customerMcpTools = await mcpClient.connectToCustomerServer(customerAccessToken);
+            const customerMcpTools = await mcpClient.connectToCustomerServer();
 
             console.log(`Connected to MCP with ${storefrontMcpTools.length} tools`);
             console.log(`Connected to customer MCP with ${customerMcpTools.length} tools`);
@@ -144,26 +141,7 @@ async function handleChatRequest(request) {
                 const toolUseId = content.id;
                 const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
 
-                // TODO: Move this to error handling below
-                // Check if this is an auth error response
-                if (toolUseResponse.error === "authorization_required") {
-                  // Handle auth error - send special message with auth URL
-                  sendMessage({
-                    type: 'auth_required',
-                    auth_url: toolUseResponse.auth_url
-                  });
-                  userActionRequired = true;
-
-                  // Add the auth message to conversation history
-                  conversationHistory.push({
-                    role: 'user',
-                    content: [{
-                      type: "tool_result",
-                      tool_use_id: toolUseId,
-                      content: toolUseResponse.text
-                    }]
-                  });
-                } else if (toolUseResponse.error) {
+                if (toolUseResponse.error) {
                   console.log("Tool use error", toolUseResponse.error);
                   // TODO: Handle other tool errors
                   conversationHistory.push({
@@ -174,10 +152,7 @@ async function handleChatRequest(request) {
                       content: toolUseResponse.error.data
                     }]
                   });
-
-                  sendMessage({ type: 'new_message' });
                 } else {
-                  // Normal tool response
                   for (const content of toolUseResponse.content) {
                     const toolUseResponseMessage = {
                       role: 'user',
@@ -189,9 +164,9 @@ async function handleChatRequest(request) {
                     };
                     conversationHistory.push(toolUseResponseMessage);
                   }
-
-                  sendMessage({ type: 'new_message' });
                 }
+
+                sendMessage({ type: 'new_message' });
               }
             }
           }

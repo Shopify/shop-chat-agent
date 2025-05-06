@@ -20,7 +20,7 @@ export async function generateAuthUrl(conversationId) {
   const shopId = process.env.SHOPIFY_SHOP_ID;
 
   // Use the actual app URL for redirect
-  const redirectUri = `${process.env.REDIRECT_URL || "https://largely-liked-killdeer.ngrok-free.app"}/auth/callback`;
+  const redirectUri = `${process.env.REDIRECT_URL}/auth/callback`;
 
   // Include the conversation ID in the state parameter for tracking
   const state = conversationId || Date.now().toString();
