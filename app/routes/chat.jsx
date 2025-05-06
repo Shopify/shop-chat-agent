@@ -142,28 +142,9 @@ async function handleChatRequest(request) {
                 const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
 
                 if (toolUseResponse.error) {
-                  console.log("Tool use error", toolUseResponse.error);
-                  // TODO: Handle other tool errors
-                  conversationHistory.push({
-                    role: 'user',
-                    content: [{
-                      type: "tool_result",
-                      tool_use_id: toolUseId,
-                      content: toolUseResponse.error.data
-                    }]
-                  });
+                  await handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage);
                 } else {
-                  for (const content of toolUseResponse.content) {
-                    const toolUseResponseMessage = {
-                      role: 'user',
-                      content: [{
-                        type: "tool_result",
-                        tool_use_id: toolUseId,
-                        content: content.text
-                      }]
-                    };
-                    conversationHistory.push(toolUseResponseMessage);
-                  }
+                  await handleToolSuccess(toolUseResponse, toolUseId, conversationHistory, sendMessage);
                 }
 
                 sendMessage({ type: 'new_message' });
@@ -175,29 +156,7 @@ async function handleChatRequest(request) {
           conversations.set(conversation_id, conversationHistory);
           controller.close();
         } catch (error) {
-          console.error('Error processing streaming request:', error);
-
-          // Check for specific error types
-          if (error.status === 401 || error.message.includes('auth') || error.message.includes('key')) {
-            sendMessage({
-              type: 'error',
-              error: 'Authentication failed with Claude API',
-              details: 'Please check your API key in environment variables',
-              message: error.message
-            });
-          } else if (error.status === 529) {
-            sendMessage({
-              type: 'rate_limit_exceeded',
-              error: 'Rate limit exceeded',
-              details: 'Please try again later'
-            });
-          } else {
-            sendMessage({
-              type: 'error',
-              error: 'Failed to get response from Claude',
-              details: error.message
-            });
-          }
+          handleStreamingError(error, sendMessage);
           controller.close();
         }
       }
@@ -206,6 +165,68 @@ async function handleChatRequest(request) {
     return new Response(responseStream, { headers });
   } catch (error) {
     return json({ error: error.message }, { status: 500 });
+  }
+}
+
+// Helper functions for tool response handling
+async function handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage) {
+  if (toolUseResponse.error.type === "auth_required") {
+    console.log("Auth required for tool:", toolName);
+    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data);
+    sendMessage({ type: 'auth_required' });
+  } else {
+    console.log("Tool use error", toolUseResponse.error);
+    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data);
+  }
+}
+
+async function handleToolSuccess(toolUseResponse, toolUseId, conversationHistory, sendMessage) {
+  for (const content of toolUseResponse.content) {
+    const toolUseResponseMessage = {
+      role: 'user',
+      content: [{
+        type: "tool_result",
+        tool_use_id: toolUseId,
+        content: content.text
+      }]
+    };
+    conversationHistory.push(toolUseResponseMessage);
+  }
+}
+
+function addToolResultToHistory(conversationHistory, toolUseId, content) {
+  conversationHistory.push({
+    role: 'user',
+    content: [{
+      type: "tool_result",
+      tool_use_id: toolUseId,
+      content: content
+    }]
+  });
+}
+
+function handleStreamingError(error, sendMessage) {
+  console.error('Error processing streaming request:', error);
+
+  if (error.status === 401 || error.message.includes('auth') || error.message.includes('key')) {
+    sendMessage({
+      type: 'error',
+      error: 'Authentication failed with Claude API',
+      details: 'Please check your API key in environment variables',
+      message: error.message
+    });
+  } else if (error.status === 529) {
+    sendMessage({
+      type: 'rate_limit_exceeded',
+      error: 'Rate limit exceeded',
+      details: 'Please try again later'
+    });
+  } else {
+    sendMessage({
+      type: 'error',
+      error: 'Failed to get response from Claude',
+      details: error.message
+    });
   }
 }
 

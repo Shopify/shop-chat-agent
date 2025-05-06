@@ -263,6 +263,10 @@ document.addEventListener('DOMContentLoaded', function() {
                   console.error('Rate limit exceeded:', data.error);
                   messageElement.textContent = "Sorry, our servers are currently busy. Please try again later.";
                 }
+                else if (data.type === 'auth_required') {
+                  // Store last message and begin polling for token
+                  startTokenPolling(conversationId, userMessage);
+                }
                 else if (data.type === 'new_message') {
                   // Format the previous message if needed
                   formatMessageContent(currentMessageElement);
@@ -324,6 +328,87 @@ document.addEventListener('DOMContentLoaded', function() {
       if (typingIndicator) {
         typingIndicator.remove();
       }
+    }
+    
+    // Function to poll for token status and automatically resume conversation when available
+    async function startTokenPolling(conversationId, lastUserMessage) {
+      if (!conversationId) return;
+      
+      console.log('Starting token polling for conversation:', conversationId);
+      
+      // Store last message for retry after authorization
+      sessionStorage.setItem('shopAiLastMessage', lastUserMessage);
+      
+      // Create a unique polling ID for this session to avoid multiple polling loops
+      const pollingId = 'polling_' + Date.now();
+      sessionStorage.setItem('shopAiTokenPollingId', pollingId);
+      
+      let attemptCount = 0;
+      const maxAttempts = 30; // Stop after ~5 minutes (10s * 30)
+      
+      const poll = async () => {
+        // Check if this polling session is still active
+        if (sessionStorage.getItem('shopAiTokenPollingId') !== pollingId) {
+          console.log('Another polling session has started, stopping this one');
+          return;
+        }
+        
+        if (attemptCount >= maxAttempts) {
+          console.log('Max polling attempts reached, stopping');
+          return;
+        }
+        
+        attemptCount++;
+        
+        try {
+          // Make request to token status endpoint
+          const tokenUrl = 'https://localhost:3458/auth/token-status?conversation_id=' + encodeURIComponent(conversationId);
+          const response = await fetch(tokenUrl);
+          
+          if (!response.ok) {
+            throw new Error('Token status check failed: ' + response.status);
+          }
+          
+          const data = await response.json();
+          
+          // If token is available, resume conversation
+          if (data.status === 'authorized') {
+            console.log('Token available, resuming conversation');
+            
+            // Get the stored message
+            const message = sessionStorage.getItem('shopAiLastMessage');
+            if (message) {
+              // Clear stored message to avoid duplicate retries
+              sessionStorage.removeItem('shopAiLastMessage');
+              
+              // Small delay to ensure UI is ready
+              setTimeout(() => {
+                // Inform user we're resuming
+                addMessage("Authorization successful! I'm now continuing with your request.", 'assistant');
+                
+                // Call streamResponse with the original message
+                streamResponse(message, conversationId);
+              }, 500);
+            }
+            
+            // Stop polling
+            sessionStorage.removeItem('shopAiTokenPollingId');
+            return;
+          }
+          
+          // Continue polling if not authorized yet
+          console.log('Token not available yet, polling again in 10s');
+          setTimeout(poll, 10000); // Poll every 10 seconds
+          
+        } catch (error) {
+          console.error('Error polling for token status:', error);
+          // Continue polling despite errors
+          setTimeout(poll, 10000);
+        }
+      };
+      
+      // Start polling
+      setTimeout(poll, 2000); // First poll after 2 seconds
     }
 
     // Get welcome message from block settings or use default
