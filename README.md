@@ -127,7 +127,19 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Configure Customer Accounts
 
-_Steps will be added_
+If you need to request access to the information gated by the customer account api, which requires the user to authenticate, you'll need to configure your app's TOML file
+```toml
+# Add Customer Account MCP configurations
+     [access_scopes]
+     scopes = "customer_write_customers"
+
+     [mcp.customer_authentication]
+     callback_url = [
+       "https://your-app-domain.com/callback",
+       "shop.1.myapp://callback"  # For mobile integration if needed
+     ]
+```
+
 
 17. View your store and test your chat application.
 
