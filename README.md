@@ -126,8 +126,16 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - Click Save
 
 ### Configure Customer Accounts
+If you need to request access to the information gated by the customer account api, which requires the user to authenticate, you'll need to execute the following:
 
-If you need to request access to the information gated by the customer account api, which requires the user to authenticate, you'll need to configure your app's TOML file
+a. Get the customer account URL. Open your GraphiQL instance and query the `customerAccountUrl` field. Use the following GraphQL query to retrieve the customer account URL information:
+```
+ shop {
+    name
+    customerAccountUrl
+```
+
+b. Configure your app's TOML file to have the proper access scopes and callback_url
 ```toml
 # Add Customer Account MCP configurations
      [access_scopes]
@@ -140,6 +148,18 @@ If you need to request access to the information gated by the customer account a
      ]
 ```
 
+c. **Verify your settings**
+   - Ensure your app's OAuth callback URL matches the one in your TOML file
+   - The callback URL will be validated when handling customer account requests
+   - Your app will need to reauthorize with the new scopes if previously installed
+
+
+Once configured, your agent will be able to:
+- Access customer order history
+- View customer account details
+- Handle customer-specific queries
+
+Customer account features require user authentication. The agent will automatically handle the OAuth flow when customers need to log in to access their information.
 
 17. View your store and test your chat application.
 
@@ -153,6 +173,8 @@ If you need to request access to the information gated by the customer account a
 - `what languages is your store available in?` > will use the `search_shop_policies_and_faqs` MCP tool.
 - `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
 - <Sid will come up with ways to test CA tools>
+
+
 
 
 ## Architecture
