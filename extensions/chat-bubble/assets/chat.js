@@ -8,24 +8,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatInput = shopAiChatContainer.querySelector('.shop-ai-chat-input input');
     const sendButton = shopAiChatContainer.querySelector('.shop-ai-chat-send');
     const messagesContainer = shopAiChatContainer.querySelector('.shop-ai-chat-messages');
+    
+    // Check if device is mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     // Toggle chat window visibility
     chatBubble.addEventListener('click', function() {
       chatWindow.classList.toggle('active');
       if (chatWindow.classList.contains('active')) {
-        chatInput.focus();
+        // On mobile, prevent body scrolling and delay focus
+        if (isMobile) {
+          document.body.classList.add('shop-ai-chat-open');
+          setTimeout(() => chatInput.focus(), 500);
+        } else {
+          chatInput.focus();
+        }
+        // Always scroll messages to bottom when opening
+        setTimeout(() => {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 100);
+      } else {
+        // Remove body class when closing
+        document.body.classList.remove('shop-ai-chat-open');
       }
     });
 
     // Close chat window
     closeButton.addEventListener('click', function() {
       chatWindow.classList.remove('active');
+      // On mobile, blur input to hide keyboard and enable body scrolling
+      if (isMobile) {
+        chatInput.blur();
+        document.body.classList.remove('shop-ai-chat-open');
+      }
     });
 
     // Send message when pressing Enter in input
     chatInput.addEventListener('keypress', function(e) {
       if (e.key === 'Enter' && chatInput.value.trim() !== '') {
         sendMessage(chatInput, messagesContainer);
+        // On mobile, blur input after sending to hide keyboard
+        if (isMobile) {
+          chatInput.blur();
+          // Then re-focus after a short delay
+          setTimeout(() => chatInput.focus(), 300);
+        }
       }
     });
 
@@ -33,8 +60,26 @@ document.addEventListener('DOMContentLoaded', function() {
     sendButton.addEventListener('click', function() {
       if (chatInput.value.trim() !== '') {
         sendMessage(chatInput, messagesContainer);
+        // On mobile, focus input after sending message
+        if (isMobile) {
+          setTimeout(() => chatInput.focus(), 300);
+        }
       }
     });
+
+    // Handle window resize to adjust scrolling
+    window.addEventListener('resize', function() {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
+
+    // Fix for iOS Safari viewport height issues
+    if (isMobile) {
+      const setViewportHeight = () => {
+        document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight}px`);
+      };
+      window.addEventListener('resize', setViewportHeight);
+      setViewportHeight();
+    }
 
     // Get welcome message from block settings or use default
     const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
