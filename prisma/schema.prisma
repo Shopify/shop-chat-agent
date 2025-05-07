@@ -39,7 +39,7 @@ model CustomerToken {
   expiresAt       DateTime
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   @@index([conversationId])
 }
 
@@ -49,6 +49,24 @@ model CodeVerifier {
   verifier        String
   createdAt       DateTime  @default(now())
   expiresAt       DateTime
-  
+
   @@index([state])
+}
+
+model Conversation {
+  id        String    @id
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // "user" or "assistant"
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
