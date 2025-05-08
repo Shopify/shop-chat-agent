@@ -126,7 +126,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - Click Save
 
 ### Configure Customer Accounts
-To enable customer account features (order history, account details, customer-specific queries), follow these steps:
+To enable customer account features that require authentication (order history, account details, customer-specific queries), follow these steps:
 
 a. **Get your customer account URL**
 ```graphql
@@ -135,7 +135,7 @@ a. **Get your customer account URL**
     customerAccountUrl
  }
 ```
-Run this query in GraphiQL to retrieve your store's customer account URL.
+Run this query in GraphiQL to retrieve your store's customer account URL. The agent will use this to access the MCP discovery endpoint when customer authentication is needed.
 
 b. **Update your app's TOML file**
 ```toml
@@ -151,17 +151,23 @@ b. **Update your app's TOML file**
 ```
 Replace your-app-domain.com with your actual app domain.
 
+This configuration is required for:
+- Defining the OAuth callback URL that will be validated during authentication requests
+- Specifying the required API client scope that merchants must accept during app installation
+
 c. **Verify your settings:**
 - Ensure your OAuth callback URL matches the one in your TOML file
 - The callback URL will be validated when handling customer account requests
 - Your app will need to reauthorize with the new scopes if previously installed
 
-After configuration, your agent can:
-- Access customer order history
-- View customer account details
-- Answer customer-specific questions
+When a customer asks about their orders or account details, the agent will:
+- Query available tools using the MCP customer account domain
+- Detect unauthorized access and initiate the OAuth flow
+- Construct an authorization URL using your AppID
+- Guide the customer through authentication
+- Access the requested information once authorized
 
-The agent automatically handles the OAuth flow when customers need to authenticate.
+This authentication flow happens automatically when customers need to access their protected information.
 
 17. View your store and test your chat application.
 
