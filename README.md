@@ -126,17 +126,18 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - Click Save
 
 ### Configure Customer Accounts
-If you need to request access to the information gated by the customer account api, which requires the user to authenticate, you'll need to execute the following:
+To enable customer account features (order history, account details, customer-specific queries), follow these steps:
 
-a. Get the customer account URL. Open your GraphiQL instance and query the `customerAccountUrl` field. Use the following GraphQL query to retrieve the customer account URL information:
+a. **Get your customer account URL**
 ```graphql
  shop {
     name
     customerAccountUrl
  }
 ```
+Run this query in GraphiQL to retrieve your store's customer account URL.
 
-b. Configure your app's TOML file to have the proper access scopes and callback_url
+b. **Update your app's TOML file**
 ```toml
 # Add Customer Account MCP configurations
      [access_scopes]
@@ -148,19 +149,19 @@ b. Configure your app's TOML file to have the proper access scopes and callback_
        "shop.1.myapp://callback"  # For mobile integration if needed
      ]
 ```
+Replace your-app-domain.com with your actual app domain.
 
-c. Verify your settings:
-   - Ensure your app's OAuth callback URL matches the one in your TOML file
-   - The callback URL will be validated when handling customer account requests
-   - Your app will need to reauthorize with the new scopes if previously installed
+c. **Verify your settings:**
+- Ensure your OAuth callback URL matches the one in your TOML file
+- The callback URL will be validated when handling customer account requests
+- Your app will need to reauthorize with the new scopes if previously installed
 
-
-Once configured, your agent will be able to:
+After configuration, your agent can:
 - Access customer order history
 - View customer account details
-- Handle customer-specific queries
+- Answer customer-specific questions
 
-Customer account features require user authentication. The agent will automatically handle the OAuth flow when customers need to log in to access their information.
+The agent automatically handles the OAuth flow when customers need to authenticate.
 
 17. View your store and test your chat application.
 
