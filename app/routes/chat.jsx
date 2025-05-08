@@ -130,14 +130,6 @@ async function handleChatRequest(request) {
                 conversationHistory.push({role: message.role, content: [content]});
               }
 
-              // Send product results if available
-              if (productsToDisplay.length > 0) {
-                sendMessage({
-                  type: 'product_results',
-                  products: productsToDisplay
-                });
-              }
-
               // Send a completion message
               sendMessage({ type: 'done' });
             });
@@ -159,6 +151,14 @@ async function handleChatRequest(request) {
                 sendMessage({ type: 'new_message' });
               }
             }
+          }
+
+          // Send product results if available
+          if (productsToDisplay.length > 0) {
+            sendMessage({
+              type: 'product_results',
+              products: productsToDisplay
+            });
           }
 
           // Store updated conversation history
