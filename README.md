@@ -129,10 +129,11 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 If you need to request access to the information gated by the customer account api, which requires the user to authenticate, you'll need to execute the following:
 
 a. Get the customer account URL. Open your GraphiQL instance and query the `customerAccountUrl` field. Use the following GraphQL query to retrieve the customer account URL information:
-```
+```graphql
  shop {
     name
     customerAccountUrl
+ }
 ```
 
 b. Configure your app's TOML file to have the proper access scopes and callback_url
@@ -148,7 +149,7 @@ b. Configure your app's TOML file to have the proper access scopes and callback_
      ]
 ```
 
-c. **Verify your settings**
+c. Verify your settings:
    - Ensure your app's OAuth callback URL matches the one in your TOML file
    - The callback URL will be validated when handling customer account requests
    - Your app will need to reauthorize with the new scopes if previously installed
@@ -173,7 +174,6 @@ Customer account features require user authentication. The agent will automatica
 - `what languages is your store available in?` > will use the `search_shop_policies_and_faqs` MCP tool.
 - `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
 - <Sid will come up with ways to test CA tools>
-
 
 
 
