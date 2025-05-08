@@ -128,7 +128,11 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 ### Configure Customer Accounts
 To enable customer account features that require authentication (order history, account details, customer-specific queries), follow these steps:
 
-a. **Get your customer account URL**
+For development:
+Make sure that you are using a development store. You can create one using the partners portal.
+With a non-development store you cannot use localhost redirect uris.
+
+1. **Get your customer account URL**
 ```graphql
  shop {
     name
@@ -137,16 +141,15 @@ a. **Get your customer account URL**
 ```
 Run this query in GraphiQL to retrieve your store's customer account URL. The agent will use this to access the MCP discovery endpoint when customer authentication is needed.
 
-b. **Update your app's TOML file**
+2. **Update your app's TOML file**
 ```toml
 # Add Customer Account MCP configurations
      [access_scopes]
-     scopes = "customer_write_customers"
+     scopes = "customer_read_customers, customer_read_orders, customer_read_markets, customer_read_store_credit_accounts, customer_read_store_credit_account_transactions"
 
      [mcp.customer_authentication]
-     callback_url = [
-       "https://your-app-domain.com/callback",
-       "shop.1.myapp://callback"  # For mobile integration if needed
+     redirect_uris = [
+       "https://your-app-domain.com/callback"
      ]
 ```
 Replace your-app-domain.com with your actual app domain.
@@ -154,14 +157,15 @@ Replace your-app-domain.com with your actual app domain.
 This configuration is required for:
 - Defining the OAuth callback URL that will be validated during authentication requests
 - Specifying the required API client scope that merchants must accept during app installation
+- If you use a development store you can use any localhost callback urls without registering them.
 
-c. **Verify your settings:**
+3. **Verify your settings:**
 - Ensure your OAuth callback URL matches the one in your TOML file
 - The callback URL will be validated when handling customer account requests
 - Your app will need to reauthorize with the new scopes if previously installed
 
-When a customer asks about their orders or account details, the agent will:
-- Query available tools using the MCP customer account domain
+When a customer asks about their orders or account details, the agent will need to:
+- List available tools using the MCP customer account domain
 - Detect unauthorized access and initiate the OAuth flow
 - Construct an authorization URL using your AppID
 - Guide the customer through authentication
@@ -169,7 +173,7 @@ When a customer asks about their orders or account details, the agent will:
 
 This authentication flow happens automatically when customers need to access their protected information.
 
-17. View your store and test your chat application.
+4. View your store and test your chat application.
 
 
 ## Examples to try
