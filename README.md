@@ -128,9 +128,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 ### Configure Customer Accounts
 To enable customer account features that require authentication (order history, account details, customer-specific queries), follow these steps:
 
-For development:
-Make sure that you are using a development store. You can create one using the partners portal.
-With a non-development store you cannot use localhost redirect uris.
+**Use a development store**: Make sure you're using a development store created through the Partners portal. Development stores allow localhost redirect URIs, which non-development stores don't support.
 
 1. **Get your customer account URL**
 ```graphql
@@ -172,9 +170,31 @@ When a customer asks about their orders or account details, the agent will need 
 - Access the requested information once authorized
 
 This authentication flow happens automatically when customers need to access their protected information.
+- The agent constructs an authorization URL using your AppID (which serves as the OAuth client_id) with these parameters:
+
+```javascript
+https://shopify.com/auth?
+client_id=YOUR_APP_ID&           //Your AppID serves as the OAuth client_id
+redirect_uri=YOUR_CALLBACK_URL&   // Must match the one in your TOML
+response_type=code&
+scope=YOUR_SCOPES&               // The scopes from your TOML file
+state=RANDOM_HEX&                // 16-byte hex for CSRF protection
+nonce=RANDOM_HEX&                // 16-byte hex for replay protection
+code_challenge=PKCE_CHALLENGE&   // SHA256 hashed and base64URL encoded
+code_challenge_method=S256
+```
+- The customer is redirected to authenticate
+- After successful authentication, Shopify redirects back to your callback URL with an authorization code
+- Your app exchanges this code for an access token to access customer data
+
+The PKCE (Proof Key for Code Exchange) flow is used to enhance security. Your app automatically handles the code challenge generation and verification.
 
 4. View your store and test your chat application.
 
+Try these examples in your chat:
+- "Show me my recent orders"
+- "What's in my order history?"
+- "Can you tell me about my account?"
 
 ## Examples to try
 - `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
