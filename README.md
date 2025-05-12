@@ -129,7 +129,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 To enable customer account features that require authentication (order history, account details, customer-specific queries), follow these steps:
 
 **Use a development store**: Make sure you're using a development store created through the Partners portal. Development stores allow localhost redirect URIs, which non-development stores don't support.
-
+**Protected Customer Data**: Apps using the Customer Account MCP server must meet the protected customer data [requirements](https://shopify.dev/docs/apps/launch/protected-customer-data).
 1. **Get your customer account URL**
 ```graphql
  shop {
