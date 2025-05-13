@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatInput = shopAiChatContainer.querySelector('.shop-ai-chat-input input');
     const sendButton = shopAiChatContainer.querySelector('.shop-ai-chat-send');
     const messagesContainer = shopAiChatContainer.querySelector('.shop-ai-chat-messages');
-    
+
     // Check if device is mobile
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -81,11 +81,17 @@ document.addEventListener('DOMContentLoaded', function() {
       setViewportHeight();
     }
 
-    // Get welcome message from block settings or use default
-    const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
+    // Check for existing conversation
+    const conversationId = sessionStorage.getItem('shopAiConversationId');
 
-    // Add the welcome message
-    addMessage(welcomeMessage, 'assistant', messagesContainer);
+    if (conversationId) {
+      // Fetch conversation history
+      fetchChatHistory(conversationId, messagesContainer);
+    } else {
+      // No previous conversation, show welcome message
+      const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
+      addMessage(welcomeMessage, 'assistant', messagesContainer);
+    }
 });
 
 // Helper function to send a message
@@ -220,7 +226,6 @@ async function streamResponse(userMessage, conversationId, messagesContainer, ch
     messageElement.classList.add('shop-ai-message', 'assistant');
     messageElement.textContent = '';
     messageElement.dataset.rawText = '';
-    removeTypingIndicator(messagesContainer);
     messagesContainer.appendChild(messageElement);
     currentMessageElement = messageElement;
     while (true) {
@@ -237,17 +242,23 @@ async function streamResponse(userMessage, conversationId, messagesContainer, ch
               conversationId = data.conversation_id;
               sessionStorage.setItem('shopAiConversationId', conversationId);
             } else if (data.type === 'chunk') {
+              removeTypingIndicator(messagesContainer);
               messageElement.dataset.rawText += data.chunk;
               messageElement.textContent = messageElement.dataset.rawText;
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            } else if (data.type === 'done') {
+            } else if (data.type === 'message_complete') {
+              showTypingIndicator(messagesContainer);
               formatMessageContent(currentMessageElement);
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else if (data.type === 'end_turn') {
+              removeTypingIndicator(messagesContainer);
             } else if (data.type === 'error') {
               console.error('Stream error:', data.error);
+              removeTypingIndicator(messagesContainer);
               messageElement.textContent = "Sorry, I couldn't process your request. Please try again later.";
             } else if (data.type === 'rate_limit_exceeded') {
               console.error('Rate limit exceeded:', data.error);
+              removeTypingIndicator(messagesContainer);
               messageElement.textContent = "Sorry, our servers are currently busy. Please try again later.";
             } else if (data.type === 'auth_required') {
               startTokenPolling(conversationId, userMessage, messagesContainer, chatInput);
@@ -379,6 +390,90 @@ async function startTokenPolling(conversationId, lastUserMessage, messagesContai
     }
   };
   setTimeout(poll, 2000);
+}
+
+/**
+ * Fetch chat history from the server
+ * @param {string} conversationId - The conversation ID
+ * @param {Element} messagesContainer - The container to add messages to
+ */
+async function fetchChatHistory(conversationId, messagesContainer) {
+  try {
+    // Show a loading message
+    const loadingMessage = document.createElement('div');
+    loadingMessage.classList.add('shop-ai-message', 'assistant');
+    loadingMessage.textContent = "Loading conversation history...";
+    messagesContainer.appendChild(loadingMessage);
+
+    // Fetch history from the server using the same URL base as streaming
+    // The endpoint is directly on /chat with a different parameter
+    const historyUrl = `https://localhost:3458/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`;
+    console.log('Fetching history from:', historyUrl);
+
+    const response = await fetch(historyUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      console.error('History fetch failed:', response.status, response.statusText);
+      throw new Error('Failed to fetch chat history: ' + response.status);
+    }
+
+    const data = await response.json();
+
+    // Remove loading message
+    messagesContainer.removeChild(loadingMessage);
+
+    // No messages, show welcome message
+    if (!data.messages || data.messages.length === 0) {
+      const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
+      addMessage(welcomeMessage, 'assistant', messagesContainer);
+      return;
+    }
+
+    // Add messages to the UI - filter out tool results
+    data.messages.forEach(message => {
+      // Handle tool results (stored as JSON strings)
+      if (message.role === 'user' && message.content.startsWith('{')) {
+        try {
+          const toolData = JSON.parse(message.content);
+          if (toolData.type === 'tool_result') {
+            // Skip tool result messages entirely
+            return;
+          }
+        } catch (e) {
+          // Not valid JSON, treat as regular message
+        }
+      }
+
+      // Regular message
+      addMessage(message.content, message.role, messagesContainer);
+    });
+
+    // Scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  } catch (error) {
+    console.error('Error fetching chat history:', error);
+
+    // Remove loading message if it exists
+    const loadingMessage = messagesContainer.querySelector('.shop-ai-message.assistant');
+    if (loadingMessage && loadingMessage.textContent === "Loading conversation history...") {
+      messagesContainer.removeChild(loadingMessage);
+    }
+
+    // Show error and welcome message
+    const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
+    addMessage(welcomeMessage, 'assistant', messagesContainer);
+
+    // Clear the conversation ID since we couldn't fetch this conversation
+    sessionStorage.removeItem('shopAiConversationId');
+  }
 }
 
 // Helper function to create product cards

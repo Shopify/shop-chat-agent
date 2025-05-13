@@ -2,32 +2,53 @@ import { json } from "@remix-run/node";
 import { Anthropic } from "@anthropic-ai/sdk";
 import MCPClient from "../mcp-client";
 import systemPrompts from "../prompts/prompts.json";
-
-// Simple memory store for conversations (in production, use a database)
-const conversations = new Map();
+import { saveMessage, getConversationHistory } from "../db.server";
 
 // This route is now API-only. Only requests with Accept: text/event-stream are supported.
 export async function loader({ request }) {
   if (request.method === "OPTIONS") {
     // Allow cross-origin requests from any origin
     const origin = request.headers.get("Origin") || "*";
+    const requestHeaders = request.headers.get("Access-Control-Request-Headers") || "Content-Type, Accept";
     return new Response(null, {
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Accept",
+        "Access-Control-Allow-Headers": requestHeaders,
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Max-Age": "86400" // 24 hours
       },
     });
   }
 
-  if (request.headers.get("Accept") === "text/event-stream") {
+  const url = new URL(request.url);
+
+  // Handle history fetch requests - matches /chat?history=true&conversation_id=XYZ
+  if (url.searchParams.has('history') && url.searchParams.has('conversation_id')) {
+    const conversationId = url.searchParams.get('conversation_id');
+    const messages = await getConversationHistory(conversationId);
+
+    // Set CORS headers for history endpoint
+    const origin = request.headers.get("Origin") || "*";
+    const requestHeaders = request.headers.get("Access-Control-Request-Headers") || "Content-Type, Accept";
+    return json({ messages }, {
+      headers: {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": requestHeaders,
+        "Access-Control-Allow-Credentials": "true"
+      }
+    });
+  }
+
+  // If it's not a history request, check if it's an SSE request
+  if (!url.searchParams.has('history') && request.headers.get("Accept") === "text/event-stream") {
     return handleChatRequest(request);
   }
-  // API-only: reject all other requests
-  return json({ error: "This endpoint only supports server-sent events (SSE) requests." }, { status: 400 });
+
+  // API-only: reject all other requests that don't match any of the above conditions
+  return json({ error: "This endpoint only supports server-sent events (SSE) requests or history requests." }, { status: 400 });
 }
 
 // Common handler for chat requests (both GET and POST)
@@ -94,13 +115,21 @@ async function handleChatRequest(request) {
           // Get or create conversation history
           let conversationHistory = [];
           let productsToDisplay = [];
-          if (conversation_id && conversations.has(conversation_id)) {
-            conversationHistory = conversations.get(conversation_id);
-          }
 
-          // Add user message to history
+          // Save user message to the database
+          await saveMessage(conversation_id, 'user', message);
+
+          // Fetch all messages from the database for this conversation
+          const dbMessages = await getConversationHistory(conversation_id);
+
+          // Format messages for Claude API
+          conversationHistory = dbMessages.map(dbMessage => ({
+            role: dbMessage.role,
+            content: dbMessage.content
+          }));
+
+          // Add current user message to memory (it's already in the database)
           let userMessage = { role: 'user', content: message };
-          conversationHistory.push(userMessage);
 
           // Get system prompt from request or use default
           const promptType = body.prompt_type || "standardAssistant";
@@ -127,11 +156,21 @@ async function handleChatRequest(request) {
             })
             .on('message', (message) => {
               for (const content of message.content) {
+                // Store message in memory
                 conversationHistory.push({role: message.role, content: [content]});
+
+                // Save message to database if it's text content
+                if (content.type === "text") {
+                  saveMessage(conversation_id, message.role, content.text)
+                    .then()
+                    .catch((error) => {
+                      console.error("Error saving message to database:", error);
+                    });
+                }
               }
 
               // Send a completion message
-              sendMessage({ type: 'done' });
+              sendMessage({ type: 'message_complete' });
             });
 
             finalMessage = await stream.finalMessage();
@@ -143,15 +182,17 @@ async function handleChatRequest(request) {
                 const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
 
                 if (toolUseResponse.error) {
-                  await handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage);
+                  await handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversation_id);
                 } else {
-                  await handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay);
+                  await handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversation_id);
                 }
 
                 sendMessage({ type: 'new_message' });
               }
             }
           }
+
+          sendMessage({ type: 'end_turn' });
 
           // Send product results if available
           if (productsToDisplay.length > 0) {
@@ -161,8 +202,6 @@ async function handleChatRequest(request) {
             });
           }
 
-          // Store updated conversation history
-          conversations.set(conversation_id, conversationHistory);
           controller.close();
         } catch (error) {
           handleStreamingError(error, sendMessage);
@@ -178,18 +217,18 @@ async function handleChatRequest(request) {
 }
 
 // Helper functions for tool response handling
-async function handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage) {
+async function handleToolError(toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversationId) {
   if (toolUseResponse.error.type === "auth_required") {
     console.log("Auth required for tool:", toolName);
-    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data);
+    await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
     sendMessage({ type: 'auth_required' });
   } else {
     console.log("Tool use error", toolUseResponse.error);
-    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data);
+    await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
   }
 }
 
-async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay) {
+async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId) {
   // Check if this is a product search result
   if (toolName === "search_shop_catalog") {
     productsToDisplay.push(...processProductSearchResult(toolUseResponse))
@@ -205,7 +244,22 @@ async function handleToolSuccess(toolUseResponse, toolName, toolUseId, conversat
         content: content.text
       }]
     };
+
+    // Add to in-memory history
     conversationHistory.push(toolUseResponseMessage);
+
+    // Save to database
+    if (conversationId) {
+      try {
+        await saveMessage(conversationId, 'user', JSON.stringify({
+          type: "tool_result",
+          tool_use_id: toolUseId,
+          content: content.text
+        }));
+      } catch (error) {
+        console.error('Error saving tool result to database:', error);
+      }
+    }
   }
 }
 
@@ -252,15 +306,31 @@ function processProductSearchResult(toolUseResponse) {
   }
 }
 
-function addToolResultToHistory(conversationHistory, toolUseId, content) {
-  conversationHistory.push({
+async function addToolResultToHistory(conversationHistory, toolUseId, content, conversationId) {
+  const toolResultMessage = {
     role: 'user',
     content: [{
       type: "tool_result",
       tool_use_id: toolUseId,
       content: content
     }]
-  });
+  };
+
+  // Add to in-memory history
+  conversationHistory.push(toolResultMessage);
+
+  // Save to database with special format to indicate tool result
+  if (conversationId) {
+    try {
+      await saveMessage(conversationId, 'user', JSON.stringify({
+        type: "tool_result",
+        tool_use_id: toolUseId,
+        content: content
+      }));
+    } catch (error) {
+      console.error('Error saving tool result to database:', error);
+    }
+  }
 }
 
 function handleStreamingError(error, sendMessage) {
@@ -273,7 +343,7 @@ function handleStreamingError(error, sendMessage) {
       details: 'Please check your API key in environment variables',
       message: error.message
     });
-  } else if (error.status === 529) {
+  } else if (error.status === 529 || error.message.includes('Overloaded')) {
     sendMessage({
       type: 'rate_limit_exceeded',
       error: 'Rate limit exceeded',

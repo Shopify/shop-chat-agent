@@ -141,6 +141,7 @@ class MCPClient {
 
   async callStorefrontTool(toolName, toolArgs) {
     try {
+      console.log("Calling storefront tool", toolName, toolArgs);
       const response = await fetch(`${this.storefrontMcpEndpoint}`, {
         method: "POST",
         headers: this.headers,
@@ -170,6 +171,7 @@ class MCPClient {
 
   async callCustomerTool(toolName, toolArgs) {
     try {
+      console.log("Calling customer tool", toolName, toolArgs);
       // First try to get a token from the database for this conversation
       let accessToken = this.customerAccessToken;
 

@@ -136,3 +136,79 @@ export async function getCustomerToken(conversationId) {
     return null;
   }
 }
+
+/**
+ * Create or update a conversation in the database
+ * @param {string} conversationId - The conversation ID
+ * @returns {Promise<Object>} - The created or updated conversation
+ */
+export async function createOrUpdateConversation(conversationId) {
+  try {
+    const existingConversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+
+    if (existingConversation) {
+      return await prisma.conversation.update({
+        where: { id: conversationId },
+        data: {
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    return await prisma.conversation.create({
+      data: {
+        id: conversationId
+      }
+    });
+  } catch (error) {
+    console.error('Error creating/updating conversation:', error);
+    throw error;
+  }
+}
+
+/**
+ * Save a message to the database
+ * @param {string} conversationId - The conversation ID
+ * @param {string} role - The message role (user or assistant)
+ * @param {string} content - The message content
+ * @returns {Promise<Object>} - The saved message
+ */
+export async function saveMessage(conversationId, role, content) {
+  try {
+    // Ensure the conversation exists
+    await createOrUpdateConversation(conversationId);
+
+    // Create the message
+    return await prisma.message.create({
+      data: {
+        conversationId,
+        role,
+        content
+      }
+    });
+  } catch (error) {
+    console.error('Error saving message:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get conversation history
+ * @param {string} conversationId - The conversation ID
+ * @returns {Promise<Array>} - Array of messages in the conversation
+ */
+export async function getConversationHistory(conversationId) {
+  try {
+    const messages = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'asc' }
+    });
+    
+    return messages;
+  } catch (error) {
+    console.error('Error retrieving conversation history:', error);
+    return [];
+  }
+}
