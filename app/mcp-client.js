@@ -13,15 +13,6 @@ class MCPClient {
     this.customerMcpEndpoint = `${accountHostUrl}/customer/api/mcp`;
     this.customerAccessToken = "";
     this.conversationId = conversationId;
-    const mcpUsername = "shopify_dev";
-    const mcpPassword = "pcyWggWqxjvnkqub2CUqcWLqbAgsh8DRBaszawQKpxQzUj3CvsZa7reCgBucNZjswyAdg7oUMUW87MaPMmwb948zxCyRH3CWmeFE";
-    const authString = `${mcpUsername}:${mcpPassword}`;
-    const base64Auth = Buffer.from(authString).toString('base64');
-
-    this.headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Basic ${base64Auth}`
-    };
   }
 
   async connectToCustomerServer() {
@@ -91,9 +82,13 @@ class MCPClient {
         console.log(`Connecting to MCP server at ${this.storefrontMcpEndpoint}`);
 
         // Make a direct request to get available tools
+        const headers = {
+          "Content-Type": "application/json"
+        };
+
         const response = await fetch(`${this.storefrontMcpEndpoint}`, {
           method: "POST",
-          headers: this.headers,
+          headers: headers,
           body: JSON.stringify({
             jsonrpc: "2.0",
             method: "tools/list",
@@ -142,9 +137,14 @@ class MCPClient {
   async callStorefrontTool(toolName, toolArgs) {
     try {
       console.log("Calling storefront tool", toolName, toolArgs);
+
+      const headers = {
+        "Content-Type": "application/json"
+      };
+
       const response = await fetch(`${this.storefrontMcpEndpoint}`, {
         method: "POST",
-        headers: this.headers,
+        headers: headers,
         body: JSON.stringify({
           jsonrpc: "2.0",
           method: "tools/call",
