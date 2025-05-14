@@ -6,26 +6,66 @@ class MCPClient {
     this.tools = [];
     this.customerTools = [];
     this.storefrontTools = [];
-    // TODO: Make this dynamic, for that first we need to allow access of mcp tools on password proteted demo stores.
+    this.hostUrl = hostUrl;
     this.storefrontMcpEndpoint = `${hostUrl}/api/mcp`;
 
-    const accountHostUrl = hostUrl.replace(/(\.myshopify\.com)$/, '.account$1');
-    this.customerMcpEndpoint = `${accountHostUrl}/customer/api/mcp`;
+    this.customerMcpEndpoint = null; // Will be fetched dynamically
     this.customerAccessToken = "";
     this.conversationId = conversationId;
-    const mcpUsername = "shopify_dev";
-    const mcpPassword = "pcyWggWqxjvnkqub2CUqcWLqbAgsh8DRBaszawQKpxQzUj3CvsZa7reCgBucNZjswyAdg7oUMUW87MaPMmwb948zxCyRH3CWmeFE";
-    const authString = `${mcpUsername}:${mcpPassword}`;
-    const base64Auth = Buffer.from(authString).toString('base64');
+  }
 
-    this.headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Basic ${base64Auth}`
-    };
+  async fetchCustomerAccountUrl() {
+    try {
+      const graphqlEndpoint = `${this.hostUrl}/api/unstable/graphql.json?fast_storefront_renderer=staging-east-2`;
+
+      const query = `
+        {
+          shop {
+            customerAccountUrl
+          }
+        }
+      `;
+
+      const response = await fetch(graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to fetch customer account URL: ${response.status} ${error}`);
+      }
+
+      const result = await response.json();
+
+      if (result.errors) {
+        throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
+      }
+
+      const customerAccountUrl = result.data?.shop?.customerAccountUrl;
+
+      if (!customerAccountUrl) {
+        throw new Error('No customer account URL found in GraphQL response');
+      }
+
+      return customerAccountUrl;
+    } catch (error) {
+      console.error('Error fetching customer account URL:', error);
+      throw error;
+    }
   }
 
   async connectToCustomerServer() {
     try {
+      // Ensure we have the customer MCP endpoint
+      if (!this.customerMcpEndpoint) {
+        const customerAccountUrl = await this.fetchCustomerAccountUrl();
+        this.customerMcpEndpoint = `${customerAccountUrl}/customer/api/mcp`;
+      }
+
       console.log(`Connecting to MCP server at ${this.customerMcpEndpoint}`);
 
       if (this.conversationId) {
@@ -91,9 +131,13 @@ class MCPClient {
         console.log(`Connecting to MCP server at ${this.storefrontMcpEndpoint}`);
 
         // Make a direct request to get available tools
+        const headers = {
+          "Content-Type": "application/json"
+        };
+
         const response = await fetch(`${this.storefrontMcpEndpoint}`, {
           method: "POST",
-          headers: this.headers,
+          headers: headers,
           body: JSON.stringify({
             jsonrpc: "2.0",
             method: "tools/list",
@@ -142,9 +186,14 @@ class MCPClient {
   async callStorefrontTool(toolName, toolArgs) {
     try {
       console.log("Calling storefront tool", toolName, toolArgs);
+
+      const headers = {
+        "Content-Type": "application/json"
+      };
+
       const response = await fetch(`${this.storefrontMcpEndpoint}`, {
         method: "POST",
-        headers: this.headers,
+        headers: headers,
         body: JSON.stringify({
           jsonrpc: "2.0",
           method: "tools/call",
@@ -172,6 +221,13 @@ class MCPClient {
   async callCustomerTool(toolName, toolArgs) {
     try {
       console.log("Calling customer tool", toolName, toolArgs);
+
+      // Ensure we have the customer MCP endpoint
+      if (!this.customerMcpEndpoint) {
+        const customerAccountUrl = await this.fetchCustomerAccountUrl();
+        this.customerMcpEndpoint = `${customerAccountUrl}/customer/api/mcp`;
+      }
+
       // First try to get a token from the database for this conversation
       let accessToken = this.customerAccessToken;
 
