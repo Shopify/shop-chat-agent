@@ -98,7 +98,7 @@ async function exchangeCodeForToken(code, state) {
     throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
   }
 
-  const redirectUri = `${process.env.REDIRECT_URL}/auth/callback`;
+  const redirectUri = process.env.REDIRECT_URL;
 
   // Correct token URL format
   const tokenUrl = `https://shopify.com/authentication/${shopId}/oauth/token`;

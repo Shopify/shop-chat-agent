@@ -16,7 +16,7 @@ export async function generateAuthUrl(conversationId, shopId) {
   const responseType = "code";
 
   // Use the actual app URL for redirect
-  const redirectUri = `${process.env.REDIRECT_URL}/auth/callback`;
+  const redirectUri = process.env.REDIRECT_URL;
 
   // Include the conversation ID and shop ID in the state parameter for tracking
   const state = `${conversationId}-${shopId}`;
