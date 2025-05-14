@@ -2,7 +2,7 @@ import { generateAuthUrl } from "./auth.server";
 import { getCustomerToken } from "./db.server";
 
 class MCPClient {
-  constructor(hostUrl, conversationId) {
+  constructor(hostUrl, conversationId, shopId) {
     this.tools = [];
     this.customerTools = [];
     this.storefrontTools = [];
@@ -13,6 +13,7 @@ class MCPClient {
     this.customerMcpEndpoint = `${accountHostUrl}/customer/api/mcp`;
     this.customerAccessToken = "";
     this.conversationId = conversationId;
+    this.shopId = shopId;
   }
 
   async connectToCustomerServer() {
@@ -209,7 +210,7 @@ class MCPClient {
         console.log("Unauthorized, generating authorization URL for customer");
 
         // Generate auth URL
-        const authResponse = await generateAuthUrl(this.conversationId);
+        const authResponse = await generateAuthUrl(this.conversationId, this.shopId);
 
         // Instead of retrying, return the auth URL for the front-end
         return {

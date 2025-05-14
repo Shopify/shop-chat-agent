@@ -7,23 +7,19 @@
  * @param {string} conversationId - The conversation ID to track the auth flow
  * @returns {Promise<Object>} - Object containing the auth URL and conversation ID
  */
-export async function generateAuthUrl(conversationId) {
-  // Import from db.server.js
+export async function generateAuthUrl(conversationId, shopId) {
   const { storeCodeVerifier } = await import('./db.server');
 
   // Generate authorization URL for the customer
-  const clientId = process.env.SHOPIFY_CLIENT_ID;
+  const clientId = process.env.SHOPIFY_API_KEY;
   const scope = "openid email customer-account-mcp-api:full";
   const responseType = "code";
-
-  // Hardcoded shop ID
-  const shopId = process.env.SHOPIFY_SHOP_ID;
 
   // Use the actual app URL for redirect
   const redirectUri = `${process.env.REDIRECT_URL}/auth/callback`;
 
-  // Include the conversation ID in the state parameter for tracking
-  const state = conversationId || Date.now().toString();
+  // Include the conversation ID and shop ID in the state parameter for tracking
+  const state = `${conversationId}-${shopId}`;
 
   // Generate code verifier and challenge
   const verifier = generateCodeVerifier();
@@ -44,7 +40,7 @@ export async function generateAuthUrl(conversationId) {
 
   return {
     url: authUrl,
-    conversation_id: state
+    conversation_id: conversationId
   };
 }
 

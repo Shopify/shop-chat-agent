@@ -211,11 +211,13 @@ async function streamResponse(userMessage, conversationId, messagesContainer, ch
       prompt_type: promptType
     });
     const streamUrl = 'https://localhost:3458/chat';
+    const shopId = window.shopId;
     const response = await fetch(streamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'text/event-stream'
+        'Accept': 'text/event-stream',
+        'X-Shopify-Shop-Id': shopId
       },
       body: requestBody
     });

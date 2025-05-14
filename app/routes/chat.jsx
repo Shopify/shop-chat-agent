@@ -98,7 +98,8 @@ async function handleChatRequest(request) {
 
 
           // Initialize MCP client
-          const mcpClient = new MCPClient(request.headers.get("origin"), conversation_id);
+          const shopId = request.headers.get("X-Shopify-Shop-Id");
+          const mcpClient = new MCPClient(request.headers.get("origin"), conversation_id, shopId);
 
 
           try {

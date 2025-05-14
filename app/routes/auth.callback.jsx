@@ -8,13 +8,14 @@ export async function loader({ request }) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+  const [conversationId, shopId] = state.split("-");
 
   if (!code) {
     return json({ error: "Authorization code is missing" }, { status: 400 });
   }
 
   try {
-    // Exchange code for access token, passing both code and state
+    // Exchange code for access token
     const tokenResponse = await exchangeCodeForToken(code, state);
 
     // Store token in database
@@ -23,15 +24,15 @@ export async function loader({ request }) {
       const expiresAt = new Date();
       expiresAt.setSeconds(expiresAt.getSeconds() + tokenResponse.expires_in);
 
-      // Store in database with conversation ID from state
+      // Store in database with conversation ID
       await storeCustomerToken(
-        state,
+        conversationId,
         tokenResponse.access_token,
         tokenResponse.refresh_token || null,
         expiresAt
       );
 
-      console.log('Stored customer token in database for conversation:', state);
+      console.log('Stored customer token in database for conversation:', conversationId);
     } catch (error) {
       console.error('Failed to store token in database:', error);
       // Continue anyway to not disrupt user flow
@@ -80,6 +81,7 @@ export async function loader({ request }) {
     });
   } catch (error) {
     console.error("Error exchanging code for token:", error);
+    console.log("shopId", shopId);
     return json({ error: "Failed to obtain access token" }, { status: 500 });
   }
 }
@@ -90,9 +92,8 @@ export async function loader({ request }) {
  * @returns {Promise<Object>} - The token response
  */
 async function exchangeCodeForToken(code, state) {
-  const clientId = process.env.SHOPIFY_CLIENT_ID;
-  const shopId = process.env.SHOPIFY_SHOP_ID;
-
+  const clientId = process.env.SHOPIFY_API_KEY;
+  const [conversation_id, shopId] = state.split("-");
   if (!clientId || !shopId) {
     throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
   }
@@ -145,6 +146,7 @@ async function exchangeCodeForToken(code, state) {
 
   if (!response.ok) {
     console.log("Request id", response.headers.get("x-request-id"));
+    console.log("conversation_id", conversation_id);
     const errorText = await response.text();
     throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
   }
