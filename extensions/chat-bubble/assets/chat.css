@@ -332,20 +332,16 @@
     animation-delay: 0.4s;
   }
 
-  .shop-ai-auth-link {
-    display: inline-block;
-    background-color: #5046e4;
-    color: white;
-    text-decoration: none;
-    padding: 8px 14px;
-    border-radius: 4px;
-    margin-top: 10px;
-    font-weight: bold;
-    transition: background-color 0.3s;
+  /* Authentication link styles */
+.shop-auth-trigger {
+    color: #5046e4;
+    text-decoration: underline;
+    font-weight: 500;
+    cursor: pointer;
   }
 
-  .shop-ai-auth-link:hover {
-    background-color: #3f36c0;
+  .shop-auth-trigger:hover {
+    opacity: 0.8;
   }
 
   /* Product Section Styling */

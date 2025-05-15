@@ -52,7 +52,7 @@
        * Set up all event listeners for UI interactions
        */
       setupEventListeners: function() {
-        const { chatBubble, chatWindow, closeButton, chatInput, sendButton, messagesContainer } = this.elements;
+        const { chatBubble, closeButton, chatInput, sendButton, messagesContainer } = this.elements;
 
         // Toggle chat window visibility
         chatBubble.addEventListener('click', () => this.toggleChatWindow());
@@ -87,6 +87,16 @@
 
         // Handle window resize to adjust scrolling
         window.addEventListener('resize', () => this.scrollToBottom());
+
+        // Add global click handler for auth links
+        document.addEventListener('click', function(event) {
+          if (event.target && event.target.classList.contains('shop-auth-trigger')) {
+            event.preventDefault();
+            if (window.shopAuthUrl) {
+              ShopAIChat.Auth.openAuthPopup(window.shopAuthUrl);
+            }
+          }
+        });
       },
 
       /**
@@ -236,7 +246,7 @@
         ShopAIChat.UI.showTypingIndicator();
 
         try {
-          ShopAIChat.API.streamResponse(userMessage, conversationId, messagesContainer, chatInput);
+          ShopAIChat.API.streamResponse(userMessage, conversationId, messagesContainer);
         } catch (error) {
           console.error('Error communicating with Claude API:', error);
           ShopAIChat.UI.removeTypingIndicator();
@@ -288,8 +298,16 @@
         // Process Markdown links
         const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
         processedText = processedText.replace(markdownLinkRegex, (match, text, url) => {
+          // Check if it's an auth URL
+          if (url.includes('shopify.com/authentication') &&
+             (url.includes('oauth/authorize') || url.includes('authentication'))) {
+            // Store the auth URL in a global variable for later use - this avoids issues with onclick handlers
+            window.shopAuthUrl = url;
+            // Just return normal link that will be handled by the document click handler
+            return '<a href="#auth" class="shop-auth-trigger">' + text + '</a>';
+          }
           // If it's a checkout link, replace the text
-          if (url.includes('/cart') || url.includes('checkout')) {
+          else if (url.includes('/cart') || url.includes('checkout')) {
             return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">click here to proceed to checkout</a>';
           } else {
             // For normal links, preserve the original text
@@ -378,9 +396,8 @@
        * @param {string} userMessage - User's message text
        * @param {string} conversationId - Conversation ID for context
        * @param {HTMLElement} messagesContainer - The messages container
-       * @param {HTMLInputElement} chatInput - The input element
        */
-      streamResponse: async function(userMessage, conversationId, messagesContainer, chatInput) {
+      streamResponse: async function(userMessage, conversationId, messagesContainer) {
         let currentMessageElement = null;
 
         try {
@@ -429,7 +446,7 @@
               if (line.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  this.handleStreamEvent(data, currentMessageElement, messagesContainer, chatInput,
+                  this.handleStreamEvent(data, currentMessageElement, messagesContainer, userMessage,
                     (newElement) => { currentMessageElement = newElement; });
                 } catch (e) {
                   console.error('Error parsing event data:', e, line);
@@ -450,10 +467,10 @@
        * @param {Object} data - Event data
        * @param {HTMLElement} currentMessageElement - Current message element being updated
        * @param {HTMLElement} messagesContainer - The messages container
-       * @param {HTMLInputElement} chatInput - The input element
+       * @param {string} userMessage - The original user message
        * @param {Function} updateCurrentElement - Callback to update the current element reference
        */
-      handleStreamEvent: function(data, currentMessageElement, messagesContainer, chatInput, updateCurrentElement) {
+      handleStreamEvent: function(data, currentMessageElement, messagesContainer, userMessage, updateCurrentElement) {
         switch (data.type) {
           case 'id':
             if (data.conversation_id) {
@@ -491,12 +508,8 @@
             break;
 
           case 'auth_required':
-            ShopAIChat.Auth.startTokenPolling(
-              sessionStorage.getItem('shopAiConversationId'),
-              currentMessageElement.dataset.rawText,
-              messagesContainer,
-              chatInput
-            );
+            // Save the last user message for resuming after authentication
+            sessionStorage.setItem('shopAiLastMessage', userMessage || '');
             break;
 
           case 'product_results':
@@ -608,18 +621,65 @@
      */
     Auth: {
       /**
+       * Opens an authentication popup window
+       * @param {string|HTMLElement} authUrlOrElement - The auth URL or link element that was clicked
+       */
+      openAuthPopup: function(authUrlOrElement) {
+        let authUrl;
+        if (typeof authUrlOrElement === 'string') {
+          // If a string URL was passed directly
+          authUrl = authUrlOrElement;
+        } else {
+          // If an element was passed
+          authUrl = authUrlOrElement.getAttribute('data-auth-url');
+          if (!authUrl) {
+            console.error('No auth URL found in element');
+            return;
+          }
+        }
+
+        // Open the popup window centered in the screen
+        const width = 600;
+        const height = 700;
+        const left = (window.innerWidth - width) / 2 + window.screenX;
+        const top = (window.innerHeight - height) / 2 + window.screenY;
+
+        const popup = window.open(
+          authUrl,
+          'ShopifyAuth',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+
+        // Focus the popup window
+        if (popup) {
+          popup.focus();
+        } else {
+          // If popup was blocked, show a message
+          alert('Please allow popups for this site to authenticate with Shopify.');
+        }
+
+        // Start polling for token availability
+        const conversationId = sessionStorage.getItem('shopAiConversationId');
+        if (conversationId) {
+          const messagesContainer = document.querySelector('.shop-ai-chat-messages');
+
+          // Add a message to indicate authentication is in progress
+          ShopAIChat.Message.add("Authentication in progress. Please complete the process in the popup window.",
+            'assistant', messagesContainer);
+
+          this.startTokenPolling(conversationId, messagesContainer);
+        }
+      },
+
+      /**
        * Start polling for token availability
        * @param {string} conversationId - Conversation ID
-       * @param {string} lastUserMessage - Last message sent by user
        * @param {HTMLElement} messagesContainer - The messages container
-       * @param {HTMLInputElement} chatInput - The input element
        */
-      startTokenPolling: function(conversationId, lastUserMessage, messagesContainer, chatInput) {
+      startTokenPolling: function(conversationId, messagesContainer) {
         if (!conversationId) return;
 
         console.log('Starting token polling for conversation:', conversationId);
-        sessionStorage.setItem('shopAiLastMessage', lastUserMessage);
-
         const pollingId = 'polling_' + Date.now();
         sessionStorage.setItem('shopAiTokenPollingId', pollingId);
 
@@ -659,7 +719,7 @@
                 setTimeout(() => {
                   ShopAIChat.Message.add("Authorization successful! I'm now continuing with your request.",
                     'assistant', messagesContainer);
-                  ShopAIChat.API.streamResponse(message, conversationId, messagesContainer, chatInput);
+                  ShopAIChat.API.streamResponse(message, conversationId, messagesContainer);
                 }, 500);
               }
 
