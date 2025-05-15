@@ -9,6 +9,8 @@ import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
+import { unauthenticated } from "../shopify.server";
+
 
 /**
  * Remix loader function for handling GET requests
@@ -131,10 +133,13 @@ async function handleChatSession({
 
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
+  const shopDomain = request.headers.get("Origin");
+  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain);
   const mcpClient = new MCPClient(
-    request.headers.get("origin"),
+    shopDomain,
     conversationId,
-    shopId
+    shopId,
+    customerMcpEndpoint
   );
 
   try {
@@ -261,6 +266,37 @@ async function handleChatSession({
   } catch (error) {
     // The streaming handler takes care of error handling
     throw error;
+  }
+}
+
+/**
+ * Get the customer MCP endpoint for a shop
+ * @param {string} shopDomain - The shop domain
+ * @returns {string} The customer MCP endpoint
+ */
+async function getCustomerMcpEndpoint(shopDomain) {
+  try {
+    const { hostname } = new URL(shopDomain);
+    const { storefront } = await unauthenticated.storefront(
+      hostname
+    );
+
+    const response = await storefront.graphql(
+      `#graphql
+      query shop {
+        shop {
+          customerAccountUrl
+        }
+      }`,
+    );
+
+    const body = await response.json();
+    const customerAccountUrl = body.data.shop.customerAccountUrl;
+
+    return `${customerAccountUrl}/customer/api/mcp`;
+  } catch (error) {
+    console.error("Error getting customer MCP endpoint:", error);
+    return null;
   }
 }
 

@@ -13,7 +13,7 @@ class MCPClient {
    * @param {string} conversationId - ID for the current conversation
    * @param {string} shopId - ID of the Shopify shop
    */
-  constructor(hostUrl, conversationId, shopId) {
+  constructor(hostUrl, conversationId, shopId, customerMcpEndpoint) {
     this.tools = [];
     this.customerTools = [];
     this.storefrontTools = [];
@@ -21,7 +21,7 @@ class MCPClient {
     this.storefrontMcpEndpoint = `${hostUrl}/api/mcp`;
 
     const accountHostUrl = hostUrl.replace(/(\.myshopify\.com)$/, '.account$1');
-    this.customerMcpEndpoint = `${accountHostUrl}/customer/api/mcp`;
+    this.customerMcpEndpoint = customerMcpEndpoint || `${accountHostUrl}/customer/api/mcp`;
     this.customerAccessToken = "";
     this.conversationId = conversationId;
     this.shopId = shopId;
