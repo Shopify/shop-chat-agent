@@ -125,76 +125,42 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 - Enable the toggle<br>
 - Click Save
 
-### Configure Customer Accounts
+### Configure Customer Account Authentication
 To enable customer account features that require authentication (order history, account details, customer-specific queries), follow these steps:
 
 **Use a development store**: Make sure you're using a development store created through the Partners portal. Development stores allow localhost redirect URIs, which non-development stores don't support.
-**Protected Customer Data**: Apps using the Customer Account MCP server must meet the protected customer data [requirements](https://shopify.dev/docs/apps/launch/protected-customer-data).
-1. **Get your customer account URL**
-```graphql
- shop {
-    name
-    customerAccountUrl
- }
-```
-Run this query in GraphiQL to retrieve your store's customer account URL. The agent will use this to access the MCP discovery endpoint when customer authentication is needed.
 
-2. **Update your app's TOML file**
+**Protected Customer Data**: Apps using the Customer Account MCP server must meet the protected customer data [requirements](https://shopify.dev/docs/apps/launch/protected-customer-data). We are looking for the partner level 2 data.
+Please follow the partner actions.
+On the partner’s dashboard, select your application by going to the Developer Dashboard apps tab. On your application page, select API access requests where you will be able to request Protected customer data access by selecting Request accesss and then selecting a reason for the access request for Protected customer data and each field (name, email, phone, address).
+
+1. **Update your app's TOML file**
 ```toml
 # Add Customer Account MCP configurations
      [access_scopes]
-     scopes = "customer_read_customers, customer_read_orders, customer_read_markets, customer_read_store_credit_accounts, customer_read_store_credit_account_transactions"
+     scopes = "customer_read_customers, customer_read_orders, customer_read_store_credit_accounts, customer_read_store_credit_account_transactions"
 
      [mcp.customer_authentication]
      redirect_uris = [
        "https://your-app-domain.com/callback"
      ]
 ```
-Replace your-app-domain.com with your actual app domain.
+Replace your-app-domain.com with your actual app domain. You will not be able to use localhost uris in your toml file.
 
 This configuration is required for:
-- Defining the OAuth callback URL that will be validated during authentication requests
+- Defining the OAuth2 callback URL that will be validated during authentication requests
 - Specifying the required API client scope that merchants must accept during app installation
-- If you use a development store you can use any localhost callback urls without registering them.
+- If you use a development store you're authentication requests can use a localhost callback urls without registering them in the toml file.
 
-3. **Verify your settings:**
-- Ensure your OAuth callback URL matches the one in your TOML file
-- The callback URL will be validated when handling customer account requests
-- Your app will need to reauthorize with the new scopes if previously installed
-
-When a customer asks about their orders or account details, the agent will need to:
+For reference, when a customer asks about their orders or account details, the agent will do the following:
 - List available tools using the MCP customer account domain
 - Detect unauthorized access and initiate the OAuth flow
-- Construct an authorization URL using your AppID
-- Guide the customer through authentication
-- Access the requested information once authorized
+- Retrieve the customer account domain via a storefront GraphQL request
+- Construct an authorization URL using your OAuth2 discovery endpoint, your AppID, and the app's redirect_uri
+- Guide the customer through authentication by providing an anthorize link
+- Perform authentication code grant flow on the callback to get the access token
+- Access the requested information
 
-This authentication flow happens automatically when customers need to access their protected information.
-- The agent constructs an authorization URL using your AppID (which serves as the OAuth client_id) with these parameters:
-
-```javascript
-https://shopify.com/auth?
-client_id=YOUR_APP_ID&           //Your AppID serves as the OAuth client_id
-redirect_uri=YOUR_CALLBACK_URL&   // Must match the one in your TOML
-response_type=code&
-scope=YOUR_SCOPES&               // The scopes from your TOML file
-state=RANDOM_HEX&                // 16-byte hex for CSRF protection
-nonce=RANDOM_HEX&                // 16-byte hex for replay protection
-code_challenge=PKCE_CHALLENGE&   // SHA256 hashed and base64URL encoded
-code_challenge_method=S256
-```
-- The customer is redirected to authenticate
-- After successful authentication, Shopify redirects back to your callback URL with an authorization code
-- Your app exchanges this code for an access token to access customer data
-
-The PKCE (Proof Key for Code Exchange) flow is used to enhance security. Your app automatically handles the code challenge generation and verification.
-
-4. View your store and test your chat application.
-
-Try these examples in your chat:
-- "Show me my recent orders"
-- "What's in my order history?"
-- "Can you tell me about my account?"
 
 ## Examples to try
 - `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
@@ -205,8 +171,9 @@ Try these examples in your chat:
 - `what languages is your store available in?` > will use the `search_shop_policies_and_faqs` MCP tool.
 - `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
 - <Sid will come up with ways to test CA tools>
-
-
+Try these examples once customer account authentication is setup;:
+- `Show me my recent orders` > will use the `get_most_recent_order_status` MCP tool
+- `Can you give me more details about order Id 1` > will use the `get_order_status` MCP tool
 
 ## Architecture
 
