@@ -182,8 +182,8 @@ When a customer requests their account details or order history, your agent will
 - `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
 
 Try these examples once customer account authentication is setup:
-- `Show me my recent orders` > will use the `get_most_recent_order_status` MCP tool
-- `Can you give me more details about order Id 1` > will use the `get_order_status` MCP tool
+- `Show me my recent orders` > will use the `get_most_recent_order_status` MCP tool.
+- `Can you give me more details about order Id 1` > will use the `get_order_status` MCP tool.
 
 ## Architecture
 
