@@ -157,7 +157,7 @@ To request these permissions:
 Replace your-app-domain.com with your actual app domain. Localhost URIs aren't allowed in this file. However, when using a development store, you can test authentication with localhost URIs without registering them here.
 
 This configuration enables your app to:
-- Define OAuth2 callback URLs for authentication requests.
+- Define OAuth 2.0 callback URLs for authentication requests.
 - Specify required API client scopes merchants must accept during app installation.
 
 **How authentication works in your app**
