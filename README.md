@@ -138,7 +138,7 @@ Apps that use the Customer Account MCP server must comply with Shopify’s [prot
 
 To request these permissions:
 * Log in to your Shopify Partners dashboard.
-* Navigate to Apps and select your app.
+* Navigate to Apps and select your app under the Developer Dashboard apps tab.
 * Click API access requests.
 * Click Request access under the Protected customer data section.
 * Provide a clear reason for requesting each data field (name, email, phone, address).
