@@ -168,7 +168,7 @@ When a customer requests their account details or order history, your agent will
 - Retrieve the customer account domain via a storefront GraphQL request.
 - Construct an OAuth 2.0 authorize URL using your OAuth discovery endpoint, App ID, and registered redirect URI.
 - Guide customers through authentication by providing an authorization link.
-- Handle OAuth2 callback requests and exchange authorization codes for access tokens.
+- Handle OAuth 2.0 callback requests and exchange authorization codes for access tokens.
 - Retrieve and display the requested customer information.
 
 
