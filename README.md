@@ -134,14 +134,18 @@ You must use a development store created through the [Shopify Partners dashboard
 
 **Protected Customer Data**
 
-Apps that use the Customer Account MCP server must comply with Shopify’s [protected customer data requirements](https://shopify.dev/docs/apps/launch/protected-customer-data). Specifically, your app needs "Level 2" protected customer data permissions.
+Apps that use the Customer Account MCP server must comply with Shopify's [protected customer data requirements](https://shopify.dev/docs/apps/launch/protected-customer-data). Your app will need:
+* Protected customer data (Level 1) access
+* Protected customer field (Level 2) access for specific data fields (name, email, phone, address)
 
-To request these permissions:
-* Log in to your Shopify Partners dashboard.
-* Navigate to Apps and select your app under the Developer Dashboard apps tab.
-* Click API access requests.
-* Click Request access under the Protected customer data section.
-* Provide a clear reason for requesting each data field (name, email, phone, address).
+Note: While developing with a development store, access to protected customer data will be automatically granted. However, when preparing to publish your app, you'll need to:
+
+1. Log in to your Shopify Partners dashboard
+2. Navigate to Apps and select your app under the Developer Dashboard apps tab
+3. Click API access requests
+4. Request access for both Level 1 (Protected customer data) and Level 2 (Protected customer fields)
+
+You'll need to provide reasons for accessing each data field during the app review process when publishing your app, but this is not required during development.
 
 **Update your app's TOML file**
 ```toml
