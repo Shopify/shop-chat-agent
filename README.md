@@ -130,7 +130,7 @@ Customer account features (order history, account details, customer-specific que
 
 **Use a development store**
 
-You must use a development store created through the [Shopify Partners dashboard](https://shopify.com/partners). Only development stores support localhost redirect URIs for testing.
+You must use a development store created through the [Shopify Partners dashboard](https://dev.shopify.com/). Only development stores support localhost redirect URIs for testing.
 
 **Protected Customer Data**
 
