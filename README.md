@@ -1,9 +1,9 @@
 # Build an AI Agent for Your Storefront
 
-A Shopify template app that lets you embed an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies or shipping, and complete purchases—all without leaving the conversation. Under the hood it speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to tap into Shopify’s APIs.
+A Shopify template app that lets you embed an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies or shipping, and complete purchases - all without leaving the conversation. Under the hood it speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to tap into Shopify’s APIs.
 
 ### Overview
-- **What it is**: A drop-in chat widget + backend that turns any storefront into an AI shopping assistant.  
+- **What it is**: A chat widget + backend that turns any storefront into an AI shopping assistant.  
 - **Key features**:  
   - Natural-language product discovery  
   - Store policy & FAQ lookup  
