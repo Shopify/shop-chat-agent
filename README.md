@@ -17,11 +17,13 @@ A Shopify template app that lets you embed an AI-powered chat widget on your sto
 ## Examples
 - `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
 - `can you search for snowboards` > will use the `search_shop_catalog` MCP tool.
-- `add The Videographer Snowboard to my cart` > will use the `add_cart_items` MCP tool and offer a checkout URL.
-- `update my cart to make that 2 items please` > will use the `update_cart_items` MCP tool.
-- `can you tell me what is in my cart` > will use the `get_cart_contents` MCP tool.
+- `add The Videographer Snowboard to my cart` > will use the `update_cart` MCP tool and offer a checkout URL.
+- `update my cart to make that 2 items please` > will use the `update_cart` MCP tool.
+- `can you tell me what is in my cart` > will use the `get_cart` MCP tool.
 - `what languages is your store available in?` > will use the `search_shop_policies_and_faqs` MCP tool.
 - `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
+- `Show me my recent orders` > will use the `get_most_recent_order_status` MCP tool.
+- `Can you give me more details about order Id 1` > will use the `get_order_status` MCP tool.
 
 ## Architecture
 
