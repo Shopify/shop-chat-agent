@@ -166,7 +166,7 @@ When a customer requests their account details or order history, your agent will
 - Identify available tools from the MCP customer account domain.
 - Detect if the customer needs to authenticate and initiate OAuth flow.
 - Retrieve the customer account domain via a storefront GraphQL request.
-- Construct an OAuth2 authorization URL using your OAuth discovery endpoint, App ID, and registered redirect URI.
+- Construct an OAuth 2.0 authorize URL using your OAuth discovery endpoint, App ID, and registered redirect URI.
 - Guide customers through authentication by providing an authorization link.
 - Handle OAuth2 callback requests and exchange authorization codes for access tokens.
 - Retrieve and display the requested customer information.
