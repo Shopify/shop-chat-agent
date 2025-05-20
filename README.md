@@ -63,7 +63,7 @@ You can learn how from our [dev docs](https://shopify.dev/docs/apps/build/storef
 Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
 
 ## Contributing
-Please follow the standard Shopify contribution guidelines when making changes to this project.
+We appreciate your interest in contributing to this project. As this is an example repository intended for educational and reference purposes, we are not accepting contributions.
 
 # Remove when dev docs go live
 
