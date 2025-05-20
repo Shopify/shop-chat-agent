@@ -4,7 +4,7 @@
  */
 import { json } from "@remix-run/node";
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory } from "../db.server";
+import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustomerAccountUrl } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
@@ -134,7 +134,7 @@ async function handleChatSession({
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
   const shopDomain = request.headers.get("Origin");
-  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain);
+  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
   const mcpClient = new MCPClient(
     shopDomain,
     conversationId,
@@ -272,10 +272,20 @@ async function handleChatSession({
 /**
  * Get the customer MCP endpoint for a shop
  * @param {string} shopDomain - The shop domain
+ * @param {string} conversationId - The conversation ID
  * @returns {string} The customer MCP endpoint
  */
-async function getCustomerMcpEndpoint(shopDomain) {
+async function getCustomerMcpEndpoint(shopDomain, conversationId) {
   try {
+    // Check if the customer account URL exists in the DB
+    const existingUrl = await getCustomerAccountUrl(conversationId);
+    
+    // If URL exists, return early with the MCP endpoint
+    if (existingUrl) {
+      return `${existingUrl}/customer/api/mcp`;
+    }
+    
+    // If not, query for it from the Shopify API
     const { hostname } = new URL(shopDomain);
     const { storefront } = await unauthenticated.storefront(
       hostname
@@ -292,6 +302,9 @@ async function getCustomerMcpEndpoint(shopDomain) {
 
     const body = await response.json();
     const customerAccountUrl = body.data.shop.customerAccountUrl;
+
+    // Store the customer account URL with conversation ID in the DB
+    await storeCustomerAccountUrl(conversationId, customerAccountUrl);
 
     return `${customerAccountUrl}/customer/api/mcp`;
   } catch (error) {

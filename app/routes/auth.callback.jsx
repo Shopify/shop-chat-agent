@@ -93,7 +93,7 @@ export async function loader({ request }) {
  */
 async function exchangeCodeForToken(code, state) {
   const clientId = process.env.SHOPIFY_API_KEY;
-  const [conversation_id, shopId] = state.split("-");
+  const [conversationId, shopId] = state.split("-");
   if (!clientId || !shopId) {
     throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
   }
@@ -101,7 +101,7 @@ async function exchangeCodeForToken(code, state) {
   const redirectUri = process.env.REDIRECT_URL;
 
   // Correct token URL format
-  const tokenUrl = `https://shopify.com/authentication/${shopId}/oauth/token`;
+  const tokenUrl = await getTokenUrl(shopId, conversationId);
 
   // Get the code verifier that corresponds to this authorization request from database
   let codeVerifier = "";
@@ -146,10 +146,37 @@ async function exchangeCodeForToken(code, state) {
 
   if (!response.ok) {
     console.log("Request id", response.headers.get("x-request-id"));
-    console.log("conversation_id", conversation_id);
+    console.log("conversation_id", conversationId);
     const errorText = await response.text();
     throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
   }
 
   return response.json();
+}
+
+/**
+ * Get the token URL from the customer account URL
+ * @param {string} shopId - The shop ID
+ * @param {string} conversationId - The conversation ID
+ * @returns {Promise<string>} - The token URL
+ */
+async function getTokenUrl(shopId, conversationId) {
+  const { getCustomerAccountUrl } = await import('../db.server');
+  const customerAccountUrl = await getCustomerAccountUrl(conversationId);
+  if (!customerAccountUrl) {
+    console.error('Customer account URL not found for conversation:', conversationId);
+    return `https://shopify.com/authentication/${shopId}/oauth/token`;
+  }
+
+  const endpoint = `${customerAccountUrl}/.well-known/oauth-authorization-server`;
+  const response = await fetch(endpoint);
+
+  if (!response.ok) {
+    console.error('Failed to fetch base auth URL from:', endpoint, response.status);
+
+    return `https://shopify.com/authentication/${shopId}/oauth/token`;
+  }
+
+  const data = await response.json();
+  return data.token_endpoint;
 }

@@ -212,3 +212,47 @@ export async function getConversationHistory(conversationId) {
     return [];
   }
 }
+
+/**
+ * Store customer account URL for a conversation
+ * @param {string} conversationId - The conversation ID
+ * @param {string} url - The customer account URL
+ * @returns {Promise<Object>} - The saved URL object
+ */
+export async function storeCustomerAccountUrl(conversationId, url) {
+  try {
+    return await prisma.customerAccountUrl.upsert({
+      where: { conversationId },
+      update: { 
+        url,
+        updatedAt: new Date()
+      },
+      create: {
+        conversationId,
+        url,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error storing customer account URL:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get customer account URL for a conversation
+ * @param {string} conversationId - The conversation ID
+ * @returns {Promise<string|null>} - The customer account URL or null if not found
+ */
+export async function getCustomerAccountUrl(conversationId) {
+  try {
+    const record = await prisma.customerAccountUrl.findUnique({
+      where: { conversationId }
+    });
+    
+    return record?.url || null;
+  } catch (error) {
+    console.error('Error retrieving customer account URL:', error);
+    return null;
+  }
+}
