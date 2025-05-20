@@ -3,10 +3,10 @@
 A Shopify template app that lets you embed an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies or shipping, and complete purchases - all without leaving the conversation. Under the hood it speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to tap into Shopify’s APIs.
 
 ### Overview
-- **What it is**: A chat widget + backend that turns any storefront into an AI shopping assistant.  
-- **Key features**:  
-  - Natural-language product discovery  
-  - Store policy & FAQ lookup  
+- **What it is**: A chat widget + backend that turns any storefront into an AI shopping assistant.
+- **Key features**:
+  - Natural-language product discovery
+  - Store policy & FAQ lookup
   - Create carts, add or remove items, and initiate checkout
   - Track orders and initiate returns
 
@@ -52,7 +52,7 @@ For direct testing, point your test suite at the `/chat` endpoint (GET or POST f
 - **Database**: SQLite (via Prisma) for session storage
 
 ## Customizations
-This repo can be customized. You can: 
+This repo can be customized. You can:
 - Edit the prompt
 - Change the chat widget UI
 - Swap out the LLM
@@ -228,6 +228,13 @@ Replace your-app-domain.com with your actual app domain. Localhost URIs aren't a
 This configuration enables your app to:
 - Define OAuth 2.0 callback URLs for authentication requests.
 - Specify required API client scopes merchants must accept during app installation.
+
+**Deploy your app and restart the server**
+
+```shell
+   shopify app deploy
+   shopify app dev --use-localhost
+   ```
 
 **How authentication works in your app**
 
