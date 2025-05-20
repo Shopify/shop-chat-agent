@@ -119,7 +119,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
 ### Create your app
 
-4. Install the latest shopify cli (vv3.79.0 or higher)
+4. Install the latest shopify cli (v3.79.0 or higher)
    ```shell
    npm install -g @shopify/cli@latest
    ```
@@ -148,7 +148,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
    ✔  (empty)
    ```
 
-9. If prompted, select no and overwrite your existing configutation file.
+9. If prompted, select no and overwrite your existing configuration file.
    ```shell
    ?  Configuration file shopify.app.toml already exists. Do you want to choose a different configuration name?
    ✔  No, overwrite my existing configuration file
@@ -170,7 +170,7 @@ This template Shopify app installs directly on your storefront and embeds an AI-
 
    At this stage, you will see `Preview URL: https://your-store.myshopify.com/...` in your terminal. You can now proceed to the next step. If you get an error, restart from step 4.
 
-12. Use mkcert to generate a certifacte for you localhost
+12. Use mkcert to generate a certificate for you localhost
    ```shell
    ?  --use-localhost requires a certificate for `localhost`. Generate it now?
    >  Yes, use mkcert to generate it
