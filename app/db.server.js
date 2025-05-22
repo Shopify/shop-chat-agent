@@ -72,11 +72,10 @@ export async function getCodeVerifier(state) {
  * Store a customer access token in the database
  * @param {string} conversationId - The conversation ID to associate with the token
  * @param {string} accessToken - The access token to store
- * @param {string} refreshToken - The refresh token (optional)
  * @param {Date} expiresAt - When the token expires
  * @returns {Promise<Object>} - The saved customer token
  */
-export async function storeCustomerToken(conversationId, accessToken, refreshToken, expiresAt) {
+export async function storeCustomerToken(conversationId, accessToken, expiresAt) {
   try {
     // Check if a token already exists for this conversation
     const existingToken = await prisma.customerToken.findFirst({
@@ -89,7 +88,6 @@ export async function storeCustomerToken(conversationId, accessToken, refreshTok
         where: { id: existingToken.id },
         data: {
           accessToken,
-          refreshToken,
           expiresAt,
           updatedAt: new Date()
         }
@@ -102,7 +100,6 @@ export async function storeCustomerToken(conversationId, accessToken, refreshTok
         id: `ct_${Date.now()}`,
         conversationId,
         accessToken,
-        refreshToken,
         expiresAt,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -129,7 +126,7 @@ export async function getCustomerToken(conversationId) {
         }
       }
     });
-    
+
     return token;
   } catch (error) {
     console.error('Error retrieving customer token:', error);
@@ -205,7 +202,7 @@ export async function getConversationHistory(conversationId) {
       where: { conversationId },
       orderBy: { createdAt: 'asc' }
     });
-    
+
     return messages;
   } catch (error) {
     console.error('Error retrieving conversation history:', error);
@@ -223,7 +220,7 @@ export async function storeCustomerAccountUrl(conversationId, url) {
   try {
     return await prisma.customerAccountUrl.upsert({
       where: { conversationId },
-      update: { 
+      update: {
         url,
         updatedAt: new Date()
       },
@@ -249,7 +246,7 @@ export async function getCustomerAccountUrl(conversationId) {
     const record = await prisma.customerAccountUrl.findUnique({
       where: { conversationId }
     });
-    
+
     return record?.url || null;
   } catch (error) {
     console.error('Error retrieving customer account URL:', error);

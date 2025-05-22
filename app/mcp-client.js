@@ -227,7 +227,12 @@ class MCPClient {
       }
     } catch (error) {
       console.error(`Error calling tool ${toolName}:`, error);
-      throw error;
+      return {
+        error: {
+          type: "internal_error",
+          data: `Error calling tool ${toolName}: ${error.message}`
+        }
+      };
     }
   }
 
