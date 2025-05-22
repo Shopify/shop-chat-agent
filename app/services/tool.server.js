@@ -45,33 +45,7 @@ export function createToolService() {
       productsToDisplay.push(...processProductSearchResult(toolUseResponse));
     }
 
-    // Continue with normal tool result processing
-    for (const content of toolUseResponse.content) {
-      const toolUseResponseMessage = {
-        role: 'user',
-        content: [{
-          type: "tool_result",
-          tool_use_id: toolUseId,
-          content: content.text
-        }]
-      };
-
-      // Add to in-memory history
-      conversationHistory.push(toolUseResponseMessage);
-
-      // Save to database
-      if (conversationId) {
-        try {
-          await saveMessage(conversationId, 'user', JSON.stringify({
-            type: "tool_result",
-            tool_use_id: toolUseId,
-            content: content.text
-          }));
-        } catch (error) {
-          console.error('Error saving tool result to database:', error);
-        }
-      }
-    }
+    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.content, conversationId);
   };
 
   /**
@@ -83,10 +57,10 @@ export function createToolService() {
     try {
       console.log("Processing product search result");
       let products = [];
-      
+
       if (toolUseResponse.content && toolUseResponse.content.length > 0) {
         const content = toolUseResponse.content[0].text;
-        
+
         try {
           let responseData;
           if (typeof content === 'object') {
@@ -94,12 +68,12 @@ export function createToolService() {
           } else if (typeof content === 'string') {
             responseData = JSON.parse(content);
           }
-          
+
           if (responseData?.products && Array.isArray(responseData.products)) {
             products = responseData.products
               .slice(0, AppConfig.tools.maxProductsToDisplay)
               .map(formatProductData);
-              
+
             console.log(`Found ${products.length} products to display`);
           }
         } catch (e) {
@@ -125,7 +99,7 @@ export function createToolService() {
       : (product.variants && product.variants.length > 0
         ? `${product.variants[0].currency} ${product.variants[0].price}`
         : 'Price not available');
-        
+
     return {
       id: product.product_id || `product-${Math.random().toString(36).substring(7)}`,
       title: product.title || 'Product',
@@ -159,11 +133,7 @@ export function createToolService() {
     // Save to database with special format to indicate tool result
     if (conversationId) {
       try {
-        await saveMessage(conversationId, 'user', JSON.stringify({
-          type: "tool_result",
-          tool_use_id: toolUseId,
-          content: content
-        }));
+        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content));
       } catch (error) {
         console.error('Error saving tool result to database:', error);
       }

@@ -170,10 +170,18 @@ async function handleChatSession({
     const dbMessages = await getConversationHistory(conversationId);
 
     // Format messages for Claude API
-    conversationHistory = dbMessages.map(dbMessage => ({
-      role: dbMessage.role,
-      content: dbMessage.content
-    }));
+    conversationHistory = dbMessages.map(dbMessage => {
+      let content;
+      try {
+        content = JSON.parse(dbMessage.content);
+      } catch (e) {
+        content = dbMessage.content;
+      }
+      return {
+        role: dbMessage.role,
+        content
+      };
+    });
 
     // Execute the conversation stream
     let finalMessage = { role: 'user', content: userMessage };
@@ -196,21 +204,15 @@ async function handleChatSession({
 
           // Handle complete messages
           onMessage: (message) => {
-            for (const content of message.content) {
-              // Store message in memory
-              conversationHistory.push({
-                role: message.role,
-                content: [content]
-              });
+            conversationHistory.push({
+              role: message.role,
+              content: message.content
+            });
 
-              // Save message to database if it's text content
-              if (content.type === "text") {
-                saveMessage(conversationId, message.role, content.text)
-                  .catch((error) => {
-                    console.error("Error saving message to database:", error);
-                  });
-              }
-            }
+            saveMessage(conversationId, message.role, JSON.stringify(message.content))
+              .catch((error) => {
+                console.error("Error saving message to database:", error);
+              });
 
             // Send a completion message
             stream.sendMessage({ type: 'message_complete' });
@@ -279,12 +281,12 @@ async function getCustomerMcpEndpoint(shopDomain, conversationId) {
   try {
     // Check if the customer account URL exists in the DB
     const existingUrl = await getCustomerAccountUrl(conversationId);
-    
+
     // If URL exists, return early with the MCP endpoint
     if (existingUrl) {
       return `${existingUrl}/customer/api/mcp`;
     }
-    
+
     // If not, query for it from the Shopify API
     const { hostname } = new URL(shopDomain);
     const { storefront } = await unauthenticated.storefront(
