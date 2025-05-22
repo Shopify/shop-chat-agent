@@ -12,7 +12,7 @@ export async function generateAuthUrl(conversationId, shopId) {
 
   // Generate authorization URL for the customer
   const clientId = process.env.SHOPIFY_API_KEY;
-  const scope = "openid email customer-account-mcp-api:full";
+  const scope = "customer-account-mcp-api:full";
   const responseType = "code";
 
   // Use the actual app URL for redirect
@@ -36,6 +36,11 @@ export async function generateAuthUrl(conversationId, shopId) {
   const codeChallengeMethod = "S256";
   const baseAuthUrl = await getBaseAuthUrl(conversationId, shopId);
 
+  if (!baseAuthUrl) {
+    throw new Error('Base auth URL not found');
+  }
+
+
   // Construct the authorization URL with hardcoded shop ID
   const authUrl = `${baseAuthUrl}?client_id=${clientId}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&state=${state}&code_challenge=${challenge}&code_challenge_method=${codeChallengeMethod}`;
 
@@ -49,7 +54,7 @@ export async function generateAuthUrl(conversationId, shopId) {
  * Get the base auth URL from the customer MCP endpoint
  * @param {string} conversationId - The conversation ID to track the auth flow
  * @param {string} shopId - The shop ID to track the auth flow
- * @returns {Promise<string>} - The base auth URL
+ * @returns {Promise<string|null>} - The base auth URL or null if not found
  */
 async function getBaseAuthUrl(conversationId, shopId) {
   const { getCustomerAccountUrl } = await import('./db.server');
@@ -57,7 +62,7 @@ async function getBaseAuthUrl(conversationId, shopId) {
 
   if (!customerAccountUrl) {
     console.error('Customer account URL not found for conversation:', conversationId);
-    return `https://shopify.com/authentication/${shopId}/oauth/authorize`;
+    return null;
   }
 
   const endpoint = `${customerAccountUrl}/.well-known/oauth-authorization-server`;
@@ -66,7 +71,7 @@ async function getBaseAuthUrl(conversationId, shopId) {
   if (!response.ok) {
     console.error('Failed to fetch base auth URL from:', endpoint, response.status);
 
-    return `https://shopify.com/authentication/${shopId}/oauth/authorize`;
+    return null;
   }
 
   const data = await response.json();
