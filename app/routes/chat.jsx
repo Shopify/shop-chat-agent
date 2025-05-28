@@ -3,8 +3,7 @@
  * Handles chat interactions with Claude API and tools
  */
 import { json } from "@remix-run/node";
-import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustomerAccountUrl } from "../db.server";
+import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustomerAccountUrl, getCustomerToken } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
@@ -128,36 +127,18 @@ async function handleChatSession({
   stream
 }) {
   // Initialize services
+  const shopDomain = request.headers.get("Origin");
+  const shopId = request.headers.get("X-Shopify-Shop-Id");
+  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
+  const storefrontMcpEndpoint = getStorefrontMcpEndpoint(shopDomain);
+  const customerAccessToken = await getCustomerAccessToken(conversationId);
+
   const claudeService = createClaudeService();
   const toolService = createToolService();
-
-  // Initialize MCP client
-  const shopId = request.headers.get("X-Shopify-Shop-Id");
-  const shopDomain = request.headers.get("Origin");
-  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
-  const mcpClient = new MCPClient(
-    shopDomain,
-    conversationId,
-    shopId,
-    customerMcpEndpoint
-  );
 
   try {
     // Send conversation ID to client
     stream.sendMessage({ type: 'id', conversation_id: conversationId });
-
-    // Connect to MCP servers and get available tools
-    let storefrontMcpTools = [], customerMcpTools = [];
-
-    try {
-      storefrontMcpTools = await mcpClient.connectToStorefrontServer();
-      customerMcpTools = await mcpClient.connectToCustomerServer();
-
-      console.log(`Connected to MCP with ${storefrontMcpTools.length} tools`);
-      console.log(`Connected to customer MCP with ${customerMcpTools.length} tools`);
-    } catch (error) {
-      console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
-    }
 
     // Prepare conversation state
     let conversationHistory = [];
@@ -186,12 +167,16 @@ async function handleChatSession({
     // Execute the conversation stream
     let finalMessage = { role: 'user', content: userMessage };
 
-    while (finalMessage.stop_reason !== "end_turn") {
+    while (finalMessage.stop_reason !== "end_turn" && finalMessage.stop_reason !== "auth_required") {
       finalMessage = await claudeService.streamConversation(
         {
           messages: conversationHistory,
           promptType,
-          tools: mcpClient.tools
+          customerMcpEndpoint,
+          storefrontMcpEndpoint,
+          customerAccessToken,
+          shopId,
+          conversationId
         },
         {
           // Handle text chunks
@@ -218,38 +203,18 @@ async function handleChatSession({
             stream.sendMessage({ type: 'message_complete' });
           },
 
-          // Handle tool use requests
-          onToolUse: async (content) => {
-            const toolName = content.name;
-            const toolArgs = content.input;
-            const toolUseId = content.id;
-
-            // Call the tool
-            const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
-
-            // Handle tool response based on success/error
-            if (toolUseResponse.error) {
-              await toolService.handleToolError(
-                toolUseResponse,
-                toolName,
-                toolUseId,
-                conversationHistory,
-                stream.sendMessage,
-                conversationId
-              );
-            } else {
-              await toolService.handleToolSuccess(
-                toolUseResponse,
-                toolName,
-                toolUseId,
-                conversationHistory,
-                productsToDisplay,
-                conversationId
-              );
+          // Handle content blocks
+          onContentBlock: (contentBlock) => {
+            if (contentBlock.type === 'text') {
+              stream.sendMessage({ type: 'new_message' });
             }
+          },
 
-            // Signal new message to client
-            stream.sendMessage({ type: 'new_message' });
+          // Handle tool result content blocks
+          onToolResult: (contentBlock) => {
+            // Parse products from tool result and add to productsToDisplay
+            const productsSearchResults = toolService.processProductSearchResult(contentBlock);
+            productsToDisplay.push(...productsSearchResults);
           }
         }
       );
@@ -314,6 +279,30 @@ async function getCustomerMcpEndpoint(shopDomain, conversationId) {
     return null;
   }
 }
+
+/**
+ * Get the storefront MCP endpoint for a shop
+ * @param {string} shopDomain - The shop domain
+ * @returns {string} The storefront MCP endpoint
+ */
+function getStorefrontMcpEndpoint(shopDomain) {
+  return `${shopDomain}/api/mcp`;
+}
+
+/**
+ * Get the customer access token for a conversation
+ * @param {string} conversationId - The conversation ID
+ * @returns {string|null} The customer access token or null if not found
+ */
+async function getCustomerAccessToken(conversationId) {
+  const customerAccessToken = await getCustomerToken(conversationId);
+  if (customerAccessToken) {
+    return customerAccessToken.accessToken;
+  }
+
+  return null;
+}
+
 
 /**
  * Gets CORS headers for the response
