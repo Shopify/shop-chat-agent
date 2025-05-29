@@ -19,14 +19,31 @@ export function createToolService() {
    * @param {Function} sendMessage - Function to send messages to the client
    * @param {string} conversationId - The conversation ID
    */
-  const handleToolError = async (toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversationId) => {
+  const handleToolError = async (
+    toolUseResponse,
+    toolName,
+    toolUseId,
+    conversationHistory,
+    sendMessage,
+    conversationId
+  ) => {
     if (toolUseResponse.error.type === "auth_required") {
       console.log("Auth required for tool:", toolName);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
-      sendMessage({ type: 'auth_required' });
+      await addToolResultToHistory(
+        conversationHistory,
+        toolUseId,
+        toolUseResponse.error.data,
+        conversationId
+      );
+      sendMessage({ type: "auth_required" });
     } else {
       console.log("Tool use error", toolUseResponse.error);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
+      await addToolResultToHistory(
+        conversationHistory,
+        toolUseId,
+        toolUseResponse.error.data,
+        conversationId
+      );
     }
   };
 
@@ -39,13 +56,61 @@ export function createToolService() {
    * @param {Array} productsToDisplay - Array to add product results to
    * @param {string} conversationId - The conversation ID
    */
-  const handleToolSuccess = async (toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId) => {
+  const handleToolSuccess = async (
+    toolUseResponse,
+    toolName,
+    toolUseId,
+    conversationHistory,
+    productsToDisplay,
+    responseEmbeddedUrls,
+    conversationId
+  ) => {
     // Check if this is a product search result
     if (toolName === AppConfig.tools.productSearchName) {
       productsToDisplay.push(...processProductSearchResult(toolUseResponse));
     }
 
-    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.content, conversationId);
+    const responseData = processToolResponseAsJson(toolUseResponse);
+    if (
+      toolName === AppConfig.tools.getProductDetailsName &&
+      responseData?.product?.embedded_url
+    ) {
+      responseEmbeddedUrls.push(responseData.product.embedded_url);
+    }
+
+    addToolResultToHistory(
+      conversationHistory,
+      toolUseId,
+      toolUseResponse.content,
+      conversationId
+    );
+  };
+
+  /**
+   * Processes the tool response
+   * @param {Object} toolUseResponse - The response from the tool
+   * @returns {Object} The processed response
+   */
+  const processToolResponseAsJson = (toolUseResponse) => {
+    try {
+      if (toolUseResponse.content && toolUseResponse.content.length > 0) {
+        const content = toolUseResponse.content[0].text;
+        try {
+          let responseData;
+          if (typeof content === "object") {
+            responseData = content;
+          } else if (typeof content === "string") {
+            responseData = JSON.parse(content);
+          }
+          return responseData;
+        } catch (e) {
+          console.error("Error parsing tool response:", e);
+        }
+      }
+    } catch (error) {
+      console.error("Error processing tool response:", error);
+    }
+    return {};
   };
 
   /**
@@ -63,9 +128,9 @@ export function createToolService() {
 
         try {
           let responseData;
-          if (typeof content === 'object') {
+          if (typeof content === "object") {
             responseData = content;
-          } else if (typeof content === 'string') {
+          } else if (typeof content === "string") {
             responseData = JSON.parse(content);
           }
 
@@ -96,17 +161,19 @@ export function createToolService() {
   const formatProductData = (product) => {
     const price = product.price_range
       ? `${product.price_range.currency} ${product.price_range.min}`
-      : (product.variants && product.variants.length > 0
+      : product.variants && product.variants.length > 0
         ? `${product.variants[0].currency} ${product.variants[0].price}`
-        : 'Price not available');
+        : "Price not available";
 
     return {
-      id: product.product_id || `product-${Math.random().toString(36).substring(7)}`,
-      title: product.title || 'Product',
+      id:
+        product.product_id ||
+        `product-${Math.random().toString(36).substring(7)}`,
+      title: product.title || "Product",
       price: price,
-      image_url: product.image_url || '',
-      description: product.description || '',
-      url: product.url || ''
+      image_url: product.image_url || "",
+      description: product.description || "",
+      url: product.url || "",
     };
   };
 
@@ -117,14 +184,21 @@ export function createToolService() {
    * @param {string} content - The content of the tool result
    * @param {string} conversationId - The conversation ID
    */
-  const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId) => {
+  const addToolResultToHistory = async (
+    conversationHistory,
+    toolUseId,
+    content,
+    conversationId
+  ) => {
     const toolResultMessage = {
-      role: 'user',
-      content: [{
-        type: "tool_result",
-        tool_use_id: toolUseId,
-        content: content
-      }]
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: toolUseId,
+          content: content,
+        },
+      ],
     };
 
     // Add to in-memory history
@@ -133,9 +207,13 @@ export function createToolService() {
     // Save to database with special format to indicate tool result
     if (conversationId) {
       try {
-        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content));
+        await saveMessage(
+          conversationId,
+          "user",
+          JSON.stringify(toolResultMessage.content)
+        );
       } catch (error) {
-        console.error('Error saving tool result to database:', error);
+        console.error("Error saving tool result to database:", error);
       }
     }
   };
@@ -143,11 +221,12 @@ export function createToolService() {
   return {
     handleToolError,
     handleToolSuccess,
+    processToolResponseAsJson,
     processProductSearchResult,
-    addToolResultToHistory
+    addToolResultToHistory,
   };
 }
 
 export default {
-  createToolService
+  createToolService,
 };

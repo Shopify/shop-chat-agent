@@ -11,7 +11,6 @@ import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
 import { unauthenticated } from "../shopify.server";
 
-
 /**
  * Remix loader function for handling GET requests
  */
@@ -162,6 +161,7 @@ async function handleChatSession({
     // Prepare conversation state
     let conversationHistory = [];
     let productsToDisplay = [];
+    let responseEmbeddedUrls = [];
 
     // Save user message to the database
     await saveMessage(conversationId, 'user', userMessage);
@@ -251,6 +251,7 @@ async function handleChatSession({
                 toolUseId,
                 conversationHistory,
                 productsToDisplay,
+                responseEmbeddedUrls,
                 conversationId
               );
             }
@@ -280,6 +281,12 @@ async function handleChatSession({
       stream.sendMessage({
         type: 'product_results',
         products: productsToDisplay
+      });
+    }
+    if(responseEmbeddedUrls.length > 0) {
+      stream.sendMessage({
+        type: 'embedded_urls',
+        urls: responseEmbeddedUrls
       });
     }
   } catch (error) {
