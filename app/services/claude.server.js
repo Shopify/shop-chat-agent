@@ -27,10 +27,10 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
    * @param {Function} streamHandlers.onToolUse - Handles tool use requests
    * @returns {Promise<Object>} The final message
    */
-  const streamConversation = async ({ 
-    messages, 
-    promptType = AppConfig.api.defaultPromptType, 
-    tools 
+  const streamConversation = async ({
+    messages,
+    promptType = AppConfig.api.defaultPromptType,
+    tools
   }, streamHandlers) => {
     // Get system prompt from configuration or use default
     const systemInstruction = getSystemPrompt(promptType);
@@ -53,9 +53,13 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
       stream.on('message', streamHandlers.onMessage);
     }
 
+    if (streamHandlers.onContentBlock) {
+      stream.on('contentBlock', streamHandlers.onContentBlock);
+    }
+
     // Wait for final message
     const finalMessage = await stream.finalMessage();
-    
+
     // Process tool use requests
     if (streamHandlers.onToolUse && finalMessage.content) {
       for (const content of finalMessage.content) {
@@ -74,7 +78,7 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
    * @returns {string} The system prompt content
    */
   const getSystemPrompt = (promptType) => {
-    return systemPrompts.systemPrompts[promptType]?.content || 
+    return systemPrompts.systemPrompts[promptType]?.content ||
       systemPrompts.systemPrompts[AppConfig.api.defaultPromptType].content;
   };
 

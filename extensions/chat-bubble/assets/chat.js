@@ -306,22 +306,22 @@
         // Create the header (always visible)
         const headerElement = document.createElement('div');
         headerElement.classList.add('shop-ai-tool-header');
-        
+
         const toolText = document.createElement('span');
         toolText.classList.add('shop-ai-tool-text');
         toolText.textContent = `Calling tool: ${toolName}`;
-        
+
         const toggleElement = document.createElement('span');
         toggleElement.classList.add('shop-ai-tool-toggle');
         toggleElement.textContent = '[+]';
-        
+
         headerElement.appendChild(toolText);
         headerElement.appendChild(toggleElement);
 
         // Create the arguments section (initially hidden)
         const argsElement = document.createElement('div');
         argsElement.classList.add('shop-ai-tool-args');
-        
+
         try {
           // Try to format JSON arguments nicely
           const parsedArgs = JSON.parse(argsString);
@@ -346,7 +346,7 @@
         // Assemble the complete element
         toolUseElement.appendChild(headerElement);
         toolUseElement.appendChild(argsElement);
-        
+
         messagesContainer.appendChild(toolUseElement);
         ShopAIChat.UI.scrollToBottom();
       }
@@ -608,6 +608,10 @@
 
             // Update the current element reference
             updateCurrentElement(newMessageElement);
+            break;
+
+          case 'content_block_complete':
+            ShopAIChat.UI.showTypingIndicator();
             break;
         }
       },
