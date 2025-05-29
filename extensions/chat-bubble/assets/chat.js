@@ -402,14 +402,19 @@
 
         try {
           const promptType = window.shopChatConfig?.promptType || "standardAssistant";
+          const userContext = window.userContext;
+          console.log('userContext', userContext);
+
           const requestBody = JSON.stringify({
             message: userMessage,
             conversation_id: conversationId,
-            prompt_type: promptType
+            prompt_type: promptType,
+            user_context: userContext
           });
 
           const streamUrl = 'https://localhost:3458/chat';
           const shopId = window.shopId;
+
 
           const response = await fetch(streamUrl, {
             method: 'POST',
@@ -486,7 +491,7 @@
             break;
 
           case 'message_complete':
-            ShopAIChat.UI.showTypingIndicator();
+            ShopAIChat.UI.removeTypingIndicator();
             ShopAIChat.Formatting.formatMessageContent(currentMessageElement);
             ShopAIChat.UI.scrollToBottom();
             break;
@@ -518,6 +523,7 @@
 
           case 'new_message':
             ShopAIChat.Formatting.formatMessageContent(currentMessageElement);
+            ShopAIChat.UI.showTypingIndicator();
 
             // Create new message element for the next response
             const newMessageElement = document.createElement('div');
@@ -577,21 +583,16 @@
 
           // Add messages to the UI - filter out tool results
           data.messages.forEach(message => {
-            // Handle tool results (stored as JSON strings)
-            if (message.role === 'user' && message.content.startsWith('{')) {
-              try {
-                const toolData = JSON.parse(message.content);
-                if (toolData.type === 'tool_result') {
-                  // Skip tool result messages entirely
-                  return;
+            try {
+              const messageContents = JSON.parse(message.content);
+              for (const contentBlock of messageContents) {
+                if (contentBlock.type === 'text') {
+                  ShopAIChat.Message.add(contentBlock.text, message.role, messagesContainer);
                 }
-              } catch (e) {
-                // Not valid JSON, treat as regular message
               }
+            } catch (e) {
+              ShopAIChat.Message.add(message.content, message.role, messagesContainer);
             }
-
-            // Regular message
-            ShopAIChat.Message.add(message.content, message.role, messagesContainer);
           });
 
           // Scroll to bottom

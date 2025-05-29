@@ -21,19 +21,21 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
    * @param {Array} params.messages - Conversation history
    * @param {string} params.promptType - The type of system prompt to use
    * @param {Array} params.tools - Available tools for Claude
+   * @param {string} params.userContext - The user context
    * @param {Object} streamHandlers - Stream event handlers
    * @param {Function} streamHandlers.onText - Handles text chunks
    * @param {Function} streamHandlers.onMessage - Handles complete messages
    * @param {Function} streamHandlers.onToolUse - Handles tool use requests
    * @returns {Promise<Object>} The final message
    */
-  const streamConversation = async ({ 
-    messages, 
-    promptType = AppConfig.api.defaultPromptType, 
-    tools 
+  const streamConversation = async ({
+    messages,
+    promptType = AppConfig.api.defaultPromptType,
+    tools,
+    userContext
   }, streamHandlers) => {
     // Get system prompt from configuration or use default
-    const systemInstruction = getSystemPrompt(promptType);
+    const systemInstruction = getSystemMessages(promptType, userContext);
 
     // Create stream
     const stream = await anthropic.messages.stream({
@@ -55,7 +57,7 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
 
     // Wait for final message
     const finalMessage = await stream.finalMessage();
-    
+
     // Process tool use requests
     if (streamHandlers.onToolUse && finalMessage.content) {
       for (const content of finalMessage.content) {
@@ -71,16 +73,28 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
   /**
    * Gets the system prompt content for a given prompt type
    * @param {string} promptType - The prompt type to retrieve
-   * @returns {string} The system prompt content
+   * @param {Hash} userContext - The user context
+   * @returns {Array} The system prompt content
    */
-  const getSystemPrompt = (promptType) => {
-    return systemPrompts.systemPrompts[promptType]?.content || 
+  const getSystemMessages = (promptType, userContext) => {
+    const systemPromptContent = systemPrompts.systemPrompts[promptType]?.content ||
       systemPrompts.systemPrompts[AppConfig.api.defaultPromptType].content;
+
+    return [
+      {
+        type: "text",
+        text: systemPromptContent
+      },
+      {
+        type: "text",
+        text: `Make a json query via get_page_details tool to the following URL to gather information about the page that the user is currently visiting: ${userContext.currentPageUrl}. Please extract relevant details such as the title, description, and any other pertinent metadata. Ensure that you handle errors gracefully and provide fallback information if the JSON response is not available.`
+      }
+    ];
   };
 
   return {
     streamConversation,
-    getSystemPrompt
+    getSystemMessages
   };
 }
 
