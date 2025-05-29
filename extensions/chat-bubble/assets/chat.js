@@ -799,6 +799,7 @@
                   ShopAIChat.Message.add("Authorization successful! I'm now continuing with your request.",
                     'assistant', messagesContainer);
                   ShopAIChat.API.streamResponse(message, conversationId, messagesContainer);
+                  ShopAIChat.UI.showTypingIndicator();
                 }, 500);
               }
 
