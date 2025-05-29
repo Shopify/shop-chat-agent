@@ -257,6 +257,16 @@ async function handleChatSession({
 
             // Signal new message to client
             stream.sendMessage({ type: 'new_message' });
+          },
+
+          // Handle content block completion
+          onContentBlock: (contentBlock) => {
+            if (contentBlock.type === 'text') {
+              stream.sendMessage({
+                type: 'content_block_complete',
+                content_block: contentBlock
+              });
+            }
           }
         }
       );
