@@ -276,6 +276,79 @@
         ShopAIChat.UI.scrollToBottom();
 
         return messageElement;
+      },
+
+      /**
+       * Add a tool use message to the chat with expandable arguments
+       * @param {string} toolMessage - Tool use message content
+       * @param {HTMLElement} messagesContainer - The messages container
+       */
+      addToolUse: function(toolMessage, messagesContainer) {
+        // Parse the tool message to extract tool name and arguments
+        const match = toolMessage.match(/Calling tool: (\w+) with arguments: (.+)/);
+        if (!match) {
+          // Fallback for unexpected format
+          const toolUseElement = document.createElement('div');
+          toolUseElement.classList.add('shop-ai-message', 'tool-use');
+          toolUseElement.textContent = toolMessage;
+          messagesContainer.appendChild(toolUseElement);
+          ShopAIChat.UI.scrollToBottom();
+          return;
+        }
+
+        const toolName = match[1];
+        const argsString = match[2];
+
+        // Create the main tool use element
+        const toolUseElement = document.createElement('div');
+        toolUseElement.classList.add('shop-ai-message', 'tool-use');
+
+        // Create the header (always visible)
+        const headerElement = document.createElement('div');
+        headerElement.classList.add('shop-ai-tool-header');
+        
+        const toolText = document.createElement('span');
+        toolText.classList.add('shop-ai-tool-text');
+        toolText.textContent = `Calling tool: ${toolName}`;
+        
+        const toggleElement = document.createElement('span');
+        toggleElement.classList.add('shop-ai-tool-toggle');
+        toggleElement.textContent = '[+]';
+        
+        headerElement.appendChild(toolText);
+        headerElement.appendChild(toggleElement);
+
+        // Create the arguments section (initially hidden)
+        const argsElement = document.createElement('div');
+        argsElement.classList.add('shop-ai-tool-args');
+        
+        try {
+          // Try to format JSON arguments nicely
+          const parsedArgs = JSON.parse(argsString);
+          argsElement.textContent = JSON.stringify(parsedArgs, null, 2);
+        } catch (e) {
+          // If not valid JSON, just show as-is
+          argsElement.textContent = argsString;
+        }
+
+        // Add click handler to toggle arguments visibility
+        headerElement.addEventListener('click', function() {
+          const isExpanded = argsElement.classList.contains('expanded');
+          if (isExpanded) {
+            argsElement.classList.remove('expanded');
+            toggleElement.textContent = '[+]';
+          } else {
+            argsElement.classList.add('expanded');
+            toggleElement.textContent = '[-]';
+          }
+        });
+
+        // Assemble the complete element
+        toolUseElement.appendChild(headerElement);
+        toolUseElement.appendChild(argsElement);
+        
+        messagesContainer.appendChild(toolUseElement);
+        ShopAIChat.UI.scrollToBottom();
       }
     },
 
@@ -514,6 +587,12 @@
 
           case 'product_results':
             ShopAIChat.UI.displayProductResults(data.products);
+            break;
+
+          case 'tool_use':
+            if (data.tool_use_message) {
+              ShopAIChat.Message.addToolUse(data.tool_use_message, messagesContainer);
+            }
             break;
 
           case 'new_message':

@@ -224,6 +224,13 @@ async function handleChatSession({
             const toolArgs = content.input;
             const toolUseId = content.id;
 
+            const toolUseMessage = `Calling tool: ${toolName} with arguments: ${JSON.stringify(toolArgs)}`;
+
+            stream.sendMessage({
+              type: 'tool_use',
+              tool_use_message: toolUseMessage
+            });
+
             // Call the tool
             const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
 
