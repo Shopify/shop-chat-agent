@@ -67,6 +67,7 @@ export function createToolService() {
   ) => {
     // Check if this is a product search result
     if (toolName === AppConfig.tools.productSearchName) {
+      console.log("product search result", toolUseResponse);
       productsToDisplay.push(...processProductSearchResult(toolUseResponse));
     }
 
@@ -104,7 +105,7 @@ export function createToolService() {
           }
           return responseData;
         } catch (e) {
-          console.error("Error parsing tool response:", e);
+          console.info("tool response is not a valid json:", content);
         }
       }
     } catch (error) {
@@ -174,6 +175,7 @@ export function createToolService() {
       image_url: product.image_url || "",
       description: product.description || "",
       url: product.url || "",
+      embedded_url: product.embedded_url || "",
     };
   };
 

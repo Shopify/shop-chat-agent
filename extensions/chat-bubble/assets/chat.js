@@ -236,6 +236,57 @@
         this.scrollToBottom();
       },
 
+      displayEmbeddedUrl: function (url, zoomOut = false) {
+        const embeddedUrl = document.createElement("div");
+        embeddedUrl.classList.add("shop-ai-embedded-url");
+        embeddedUrl.innerHTML = `<iframe src="${url}" width="100%" height="350px" frameborder="0"></iframe>`;
+        const iframe = embeddedUrl.querySelector("iframe");
+        iframe.addEventListener("load", () => {
+          const newStyle = document.createElement("style");
+          newStyle.textContent = `
+            shopify-media img {
+              width: 100% !important;
+              height: auto !important;
+            }
+          `;
+          if (zoomOut) {
+            iframe.contentWindow.document.documentElement.style.zoom = 0.5;
+            newStyle.textContent += `
+              .product-card__add-button {
+                zoom: 1.5 !important;
+              }
+            `;
+          }
+          iframe.contentWindow.document.body.appendChild(newStyle);
+          if (!zoomOut) {
+            setTimeout(() => {
+              iframe.style.height =
+                iframe.contentWindow.document.body.scrollHeight + "px";
+            }, 1000);
+          }
+        });
+        // hang an event listener for messages from the iframe
+        const messageHandler = (event) => {
+          if (event.source !== iframe.contentWindow) {
+            return;
+          }
+          try {
+            const data = event?.data ?? {};
+            if (data.type === "intent") {
+              if (data.payload.intent === "add_to_cart") {
+                ShopAIChat.Product.addProductToCart(
+                  data.payload.params.product
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Error parsing event data:", error, event.data);
+          }
+        };
+        window.addEventListener("message", messageHandler);
+        return embeddedUrl;
+      },
+
       displayEmbeddedUrls: function (urls) {
         const { messagesContainer } = this.elements;
 
@@ -244,37 +295,12 @@
         messagesContainer.appendChild(embeddedUrlsContainer);
 
         urls.forEach((url) => {
-          const embeddedUrl = document.createElement("div");
-          embeddedUrl.classList.add("shop-ai-embedded-url");
-          embeddedUrl.innerHTML = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`;
+          const embeddedUrl = this.displayEmbeddedUrl(url);
           embeddedUrlsContainer.appendChild(embeddedUrl);
-          const iframe = embeddedUrl.querySelector("iframe");
-          iframe.addEventListener("load", () => {
-            iframe.style.height =
-              iframe.contentWindow.document.body.scrollHeight + "px";
-          });
-          // hang an event listener for messages from the iframe
-          const messageHandler = (event) => {
-            if (event.source !== iframe.contentWindow) {
-              return;
-            }
-            try {
-              const data = event?.data ?? {};
-              if (data.type === "intent") {
-                if (data.payload.intent === "add_to_cart") {
-                  ShopAIChat.Product.addProductToCart(
-                    data.payload.params.product
-                  );
-                }
-              }
-            } catch (error) {
-              console.error("Error parsing event data:", error, event.data);
-            }
-          };
-          window.addEventListener("message", messageHandler);
         });
 
         this.scrollToBottom();
+        return embeddedUrlsContainer;
       },
     },
 
@@ -984,67 +1010,66 @@
        * @returns {HTMLElement} Product card element
        */
       createCard: function (product) {
+        let embeddedUrl = product.embedded_url;
+        if (embeddedUrl.includes("/.component")) {
+          // hack for the issue we have with the url
+          embeddedUrl = embeddedUrl.replace(
+            "/.component",
+            `/${product.title.toLowerCase().replace(/ /g, "-")}.component`
+          );
+          // add ?fast_storefront_renderer=staging-liquid-2 to the end if it's not there
+          if (
+            !embeddedUrl.includes("?fast_storefront_renderer=staging-liquid-2")
+          ) {
+            embeddedUrl += "?fast_storefront_renderer=staging-liquid-2";
+          }
+        }
+
+        const embeddedUrlElement =
+          ShopAIChat.UI.displayEmbeddedUrl(embeddedUrl, true);
+        return embeddedUrlElement;
+
         const card = document.createElement("div");
         card.classList.add("shop-ai-product-card");
 
-        // Create image container
-        const imageContainer = document.createElement("div");
-        imageContainer.classList.add("shop-ai-product-image");
+        // Escape HTML to prevent XSS
+        const escapeHtml = (text) => {
+          const div = document.createElement("div");
+          div.textContent = text;
+          return div.innerHTML;
+        };
 
-        // Add product image or placeholder
-        const image = document.createElement("img");
-        image.src =
+        const imageUrl =
           product.image_url ||
           "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-image_large.png";
-        image.alt = product.title;
-        image.onerror = function () {
-          // If image fails to load, use a fallback placeholder
-          this.src =
-            "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-image_large.png";
-        };
-        imageContainer.appendChild(image);
-        card.appendChild(imageContainer);
+        const fallbackUrl =
+          "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-image_large.png";
 
-        // Add product info
-        const info = document.createElement("div");
-        info.classList.add("shop-ai-product-info");
+        // Create title HTML - either as link or plain text
+        const titleHtml = product.url
+          ? `<a href="${escapeHtml(product.url)}" target="_blank">${escapeHtml(product.title)}</a>`
+          : escapeHtml(product.title);
 
-        // Add product title
-        const title = document.createElement("h3");
-        title.classList.add("shop-ai-product-title");
-        title.textContent = product.title;
+        card.innerHTML = `
+          <div class="shop-ai-product-image">
+            <img src="${escapeHtml(imageUrl)}" 
+                 alt="${escapeHtml(product.title)}" 
+                 onerror="this.src='${fallbackUrl}'">
+          </div>
+          <div class="shop-ai-product-info">
+            <h3 class="shop-ai-product-title">${titleHtml}</h3>
+            <p class="shop-ai-product-price">${escapeHtml(product.price)}</p>
+            <button class="shop-ai-add-to-cart" data-product-id="${escapeHtml(product.id)}">
+              Add to Cart
+            </button>
+          </div>
+        `;
 
-        // If product has a URL, make the title a link
-        if (product.url) {
-          const titleLink = document.createElement("a");
-          titleLink.href = product.url;
-          titleLink.target = "_blank";
-          titleLink.textContent = product.title;
-          title.textContent = "";
-          title.appendChild(titleLink);
-        }
-
-        info.appendChild(title);
-
-        // Add product price
-        const price = document.createElement("p");
-        price.classList.add("shop-ai-product-price");
-        price.textContent = product.price;
-        info.appendChild(price);
-
-        // Add add-to-cart button
-        const button = document.createElement("button");
-        button.classList.add("shop-ai-add-to-cart");
-        button.textContent = "Add to Cart";
-        button.dataset.productId = product.id;
-
-        // Add click handler for the button
+        // Add click handler for the button after innerHTML is set
+        const button = card.querySelector(".shop-ai-add-to-cart");
         button.addEventListener("click", function () {
           ShopAIChat.Product.addProductToCart(product.title);
         });
-
-        info.appendChild(button);
-        card.appendChild(info);
 
         return card;
       },
