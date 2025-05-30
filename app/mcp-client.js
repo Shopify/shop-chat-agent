@@ -18,7 +18,7 @@ class MCPClient {
     this.customerTools = [];
     this.storefrontTools = [];
     // TODO: Make this dynamic, for that first we need to allow access of mcp tools on password proteted demo stores.
-    this.storefrontMcpEndpoint = `${hostUrl}/api/mcp?fast_storefront_renderer=staging-liquid-2`;
+    this.storefrontMcpEndpoint = `${hostUrl}/api/mcp?fast_storefront_renderer=staging-central`;
 
     const accountHostUrl = hostUrl.replace(/(\.myshopify\.com)$/, '.account$1');
     this.customerMcpEndpoint = customerMcpEndpoint || `${accountHostUrl}/customer/api/mcp`;
