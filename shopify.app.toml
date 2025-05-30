@@ -1,28 +1,23 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "40a07df88f40a4343b11a77e6fcc0a11"
+client_id = "c440c924d96817a55036dede1873432a"
+organization_id = "129071648"
 name = "shop-chat-agent"
-handle = "shop-chat-agent-200"
-application_url = "https://localhost:3458"
+application_url = "https://example.com"
 embedded = true
 
-[build]
-include_config_on_deploy = true
-automatically_update_urls_on_dev = true
-
 [webhooks]
-api_version = "2025-04"
+api_version = "2025-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "customer_read_customers,customer_read_orders,customer_read_store_credit_account_transactions,customer_read_store_credit_accounts,unauthenticated_read_product_listings"
 
 [auth]
-redirect_urls = [
-  "https://localhost:3458/auth/callback",
-  "https://localhost:3458/auth/shopify/callback",
-  "https://localhost:3458/api/auth/callback"
-]
+redirect_urls = [ "https://example.com/api/auth" ]
 
-[pos]
-embedded = false
+[customer_authentication]
+redirect_uris = [ "https://shop-chat-agent.com/callback" ]
+
+[build]
+automatically_update_urls_on_dev = true
