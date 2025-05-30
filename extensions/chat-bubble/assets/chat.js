@@ -205,6 +205,8 @@
       displayProductResults: function (products) {
         const { messagesContainer } = this.elements;
 
+        const productsSize = Array.isArray(products) ? products.length : 0;
+
         // Create a wrapper for the product section
         const productSection = document.createElement("div");
         productSection.classList.add("shop-ai-product-section");
@@ -216,10 +218,48 @@
         header.innerHTML = "<h4>Top Matching Products</h4>";
         productSection.appendChild(header);
 
+        // Create the product grid window container
+        const productGridWindow = document.createElement("div");
+        productGridWindow.classList.add("shop-ai-product-grid-window");
+        productSection.appendChild(productGridWindow);
+
+        // add right and left arrows to the product grid window
+        const leftArrow = document.createElement("div");
+        leftArrow.classList.add("shop-ai-product-grid-arrow", "left");
+        leftArrow.innerHTML = "›";
+        leftArrow.style.transform = "rotate(180deg)";
+        productGridWindow.appendChild(leftArrow);
+
+        const rightArrow = document.createElement("div");
+        rightArrow.classList.add("shop-ai-product-grid-arrow", "right");
+        rightArrow.innerHTML = "›";
+        productGridWindow.appendChild(rightArrow);
+
         // Create the product grid container
         const productsContainer = document.createElement("div");
         productsContainer.classList.add("shop-ai-product-grid");
-        productSection.appendChild(productsContainer);
+        productsContainer.dataset.currentIndex = 0;
+        productGridWindow.appendChild(productsContainer);
+        leftArrow.addEventListener("click", () => {
+          const currentIndex = parseInt(productsContainer.dataset.currentIndex);
+          const newIndex =
+            currentIndex - 1 >= 0
+              ? currentIndex - 1
+              : productsSize - 1;
+          const newScrollLeft = newIndex * -300;
+          productsContainer.style.transform = `translateX(${newScrollLeft}px)`;
+          productsContainer.dataset.currentIndex = newIndex;
+        });
+        rightArrow.addEventListener("click", () => {
+          const currentIndex = parseInt(productsContainer.dataset.currentIndex);
+          const newIndex =
+            currentIndex + 1 <= productsSize - 1
+              ? currentIndex + 1
+              : 0;
+          const newScrollLeft = newIndex * -300;
+          productsContainer.style.transform = `translateX(${newScrollLeft}px)`;
+          productsContainer.dataset.currentIndex = newIndex;
+        });
 
         if (!products || !Array.isArray(products) || products.length === 0) {
           const noProductsMessage = document.createElement("p");
