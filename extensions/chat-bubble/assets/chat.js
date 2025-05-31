@@ -1057,11 +1057,11 @@
             "/.component",
             `/${product.title.toLowerCase().replace(/ /g, "-")}.component`
           );
-          // add ?fast_storefront_renderer=staging-liquid-2 to the end if it's not there
+          // add ?fast_storefront_renderer=staging-central to the end if it's not there
           if (
-            !embeddedUrl.includes("?fast_storefront_renderer=staging-liquid-2")
+            !embeddedUrl.includes("?fast_storefront_renderer=staging-central")
           ) {
-            embeddedUrl += "?fast_storefront_renderer=staging-liquid-2";
+            embeddedUrl += "?fast_storefront_renderer=staging-central";
           }
         }
 
