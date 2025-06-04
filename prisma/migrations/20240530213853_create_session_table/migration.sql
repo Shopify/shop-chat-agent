@@ -16,3 +16,4 @@ CREATE TABLE "Session" (
     "collaborator" BOOLEAN DEFAULT false,
     "emailVerified" BOOLEAN DEFAULT false
 );
+ 
