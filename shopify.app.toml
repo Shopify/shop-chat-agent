@@ -1,13 +1,14 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "c7620445782ab07b8f9ca79542955767"
+client_id = "b16eabbb2a6d85c2ba60b59845cb3054"
 name = "EpsiChatAgent"
-handle = "epsichatagent-5"
-application_url = "https://localhost:3458"
+handle = "epsichatagent"
+application_url = "https://epsichatagent-199342217169.europe-west2.run.app"
 embedded = true
 
 [build]
 include_config_on_deploy = true
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2025-04"
@@ -17,7 +18,7 @@ api_version = "2025-04"
 scopes = "customer_read_customers,customer_read_orders,customer_read_store_credit_account_transactions,customer_read_store_credit_accounts,unauthenticated_read_product_listings"
 
 [auth]
-redirect_urls = ["https://localhost:3458/auth/callback", "https://localhost:3458/auth/shopify/callback", "https://localhost:3458/api/auth/callback"]
+redirect_urls = ["https://epsichatagent-199342217169.europe-west2.run.app/auth/callback", "https://epsichatagent-199342217169.europe-west2.run.app/auth/shopify/callback", "https://epsichatagent-199342217169.europe-west2.run.app/api/auth/callback"]
 
 [pos]
 embedded = false
