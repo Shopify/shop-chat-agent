@@ -1,0 +1,56 @@
+.popShopProgressBar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+@media screen and (max-width: 900px)  {
+    .popShopProgressBar {
+        width: 100%
+    }
+}
+
+.header {
+  padding: 1.6rem;
+  /* border-bottom: 1px solid var(--p-border-subdued, #dfe3e8); */
+}
+
+.progressSection {
+  padding: 0 1.6rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  border-bottom: 1px solid var(--p-border-subdued, #dfe3e8);
+}
+
+.stepsContainer {
+  padding: 0.8rem 1.6rem;
+}
+
+.stepWrapper {
+  margin-bottom: 0.8rem;
+}
+
+.stepWrapper:last-child {
+  margin-bottom: 0;
+}
+
+.stepHeader {
+  padding: 1.2rem 0;
+  cursor: pointer;
+}
+
+.openStep {
+  background: #FAFAFA;
+  border: 1px solid #E1E3E5;
+  border-radius: 8px;
+}
+
+.openStep .stepHeader {
+    padding: 1.6rem;
+    padding-bottom: 1.2rem;
+}
+
+.stepContent {
+  padding: 0 1.6rem 1.6rem 4.8rem;
+}
