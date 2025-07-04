@@ -90,8 +90,12 @@ export const SetupItem = ({
                         {primaryButton ? (
                           <Button
                             variant="primary"
-                            url={primaryButton.props.url}
-                            external={true}
+                            {...{
+                              ...primaryButton.props,
+                              onClick: primaryButton.url
+                                ? undefined
+                                : () => handleSubmit(id),
+                            }}
                           >
                             {primaryButton.content}
                           </Button>
