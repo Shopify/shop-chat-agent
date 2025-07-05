@@ -1,37 +1,31 @@
 import { useEffect, useState } from "react";
 import { SetupGuide } from "./SetupGuide";
-//import { verifyCompatibility } from "../api/verification";
-//import { trackEvent, trackingEvents } from "../utils/trackingUtils";
-import {
-  fetchIsThemeBlockAdded,
-  fetchIsThemeCompatible,
-  saveIsThemeBlockAdded,
-  saveIsThemeCompatible,
-} from "../utils/localStorage";
-//import { redirectWithin } from "../utils/shopifyApp";
-//import { getThemeEditorUrl } from "../utils/theme";
-//import { completeOnboarding } from "../api/merchant";
 
 const STEPS = {
   INSTALL_APP: 0,
   ADD_THEME_BLOCK: 1,
 };
 
+const STORAGE_KEYS = {
+  IS_THEME_BLOCK_ADDED: "isThemeBlockAdded",
+  IS_ONBOARDING_COMPLETED: "isOnboardingCompleted",
+};
 
-
-export default function Onboarding() {
-  const merchant = { isOnboardingCompleted: false, shop: "epischatagentstore.myshopify.com" };   
-  
+export default function Onboarding({ THEME_EXTENSION_ID, THEME_APP_EXTENSION_NAME }) {
   const [items, setItems] = useState([]);
   const [showGuide, setShowGuide] = useState(true);
 
   useEffect(() => {
-    const isThemeBlockAdded = fetchIsThemeBlockAdded() || false;
-    console.log(isThemeBlockAdded)
+    const isThemeBlockAdded =
+      localStorage.getItem(STORAGE_KEYS.IS_THEME_BLOCK_ADDED) === "true";
+    const isOnboardingCompleted =
+      localStorage.getItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED) === "true";
+
+    setShowGuide(!isOnboardingCompleted);
 
     const ITEMS = [
       {
-        id: STEPS.THEME_COMPATIBILITY,
+        id: STEPS.INSTALL_APP,
         title: "Install our app",
         expanded: false,
         complete: true,
@@ -39,16 +33,11 @@ export default function Onboarding() {
       {
         id: STEPS.ADD_THEME_BLOCK,
         title: "Enable the theme extension",
-        description:
-          "Enable the theme extension in your theme editor",
+        description: "Enable the theme extension in your theme editor",
         complete: isThemeBlockAdded,
-        expanded: true,
+        expanded: !isThemeBlockAdded,
         primaryButton: {
           content: "Enable extension",
-          props: {
-            url: `https://${merchant.shop}/admin/themes/current/editor?context=apps&appEmbed=b16eabbb2a6d85c2ba60b59845cb3054%2Fchat-interface`,
-            external: true,
-          },
         },
       },
     ];
@@ -66,20 +55,11 @@ export default function Onboarding() {
     setItems(expandedItem);
   }, []);
 
-  useEffect(() => {
-    if (merchant) {
-        setShowGuide(!merchant.isOnboardingCompleted);      
-    }
-  }, [merchant]);
-
   const onForceComplete = async (step) => {
-    if (step === STEPS.THEME_COMPATIBILITY) {
-      const currentItem = items.find((item) => item.id === step);
-      saveIsThemeCompatible(!currentItem.complete);
+    if (step === STEPS.INSTALL_APP) {
+      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
     } else if (step === STEPS.ADD_THEME_BLOCK) {
-      const currentItem = items.find((item) => item.id === step);
-      saveIsThemeBlockAdded(!currentItem.complete);
-      await completeOnboarding();
+      localStorage.setItem(STORAGE_KEYS.IS_THEME_BLOCK_ADDED, "true");
     }
 
     setItems((prev) =>
@@ -88,22 +68,23 @@ export default function Onboarding() {
           ...item,
           complete: item.id === step ? !item.complete : item.complete,
         };
-      })
+      }),
     );
   };
 
   const handleDismiss = async (id) => {
-
     if (!id) {
       setShowGuide(false);
-      await completeOnboarding();
+      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
       return;
     }
 
-    if (id === STEPS.THEME_COMPATIBILITY) {
-      saveIsThemeCompatible(true);
-    } else if (id === STEPS.ADD_THEME_BLOCK) {
-      saveIsThemeBlockAdded(true);
+    if (id === STEPS.INSTALL_APP) {
+      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
+    }
+
+    if (id === STEPS.ADD_THEME_BLOCK) {
+      localStorage.setItem(STORAGE_KEYS.IS_THEME_BLOCK_ADDED, "true");
     }
 
     const currentIndex = items.findIndex((item) => item.id === id);
@@ -115,7 +96,7 @@ export default function Onboarding() {
           complete: item.id === id ? true : item.complete,
           expanded: item.id === currentIndex + 1,
         };
-      })
+      }),
     );
   };
 
@@ -128,33 +109,29 @@ export default function Onboarding() {
         ...item,
         loading: item.id === id ? false : item.loading,
         expanded: item.id === currentIndex + 1,
-      }))
+      })),
     );
   };
 
   const handleSubmit = async (id) => {
+    console.log(id);
+
     try {
       setItems((prev) =>
-        prev.map((item) => ({ ...item, loading: item.id === id }))
+        prev.map((item) => ({ ...item, loading: item.id === id })),
       );
 
       switch (id) {
-        case STEPS.THEME_COMPATIBILITY:
-          //trackEvent(trackingEvents.THEME_COMPATIBILITY_BUTTON);
-          const { isCompatible } = await verifyCompatibility();
-
-          if (!isCompatible) {
-            shopify.toast.show("Theme check failed", { type: "error" });
-            return;
-          }
-          saveIsThemeCompatible(isCompatible);
+        case STEPS.INSTALL_APP:
+          localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
           completeStep(id);
           break;
         case STEPS.ADD_THEME_BLOCK:
+          const subdomain = window.shopify.config.shop.split(".")[0];
+
+          const themeEditorUrl = `https://admin.shopify.com/store/${subdomain}/themes/current/editor?context=apps&activateAppId=${THEME_EXTENSION_ID}/${THEME_APP_EXTENSION_NAME}`;
+          open(themeEditorUrl, "_blank");
           completeStep(id);
-          await completeOnboarding();
-          const themeEditorUrl = "getThemeEditorUrl(merchant?.shop)";
-          window.open(themeEditorUrl, "_blank");
           break;
         default:
           break;
@@ -164,7 +141,7 @@ export default function Onboarding() {
 
   const setExpanded = (id) => {
     setItems((prev) =>
-      prev.map((item) => ({ ...item, expanded: item.id === id }))
+      prev.map((item) => ({ ...item, expanded: item.id === id })),
     );
   };
 
