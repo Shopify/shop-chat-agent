@@ -17,9 +17,9 @@ export default function Onboarding({ THEME_EXTENSION_ID, THEME_APP_EXTENSION_NAM
 
   useEffect(() => {
     const isThemeBlockAdded =
-      localStorage.getItem(STORAGE_KEYS.IS_THEME_BLOCK_ADDED) === "true";
+      localStorage.getItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_THEME_BLOCK_ADDED}`) === "true";
     const isOnboardingCompleted =
-      localStorage.getItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED) === "true";
+      localStorage.getItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_ONBOARDING_COMPLETED}`) === "true";
 
     setShowGuide(!isOnboardingCompleted);
 
@@ -57,9 +57,9 @@ export default function Onboarding({ THEME_EXTENSION_ID, THEME_APP_EXTENSION_NAM
 
   const onForceComplete = async (step) => {
     if (step === STEPS.INSTALL_APP) {
-      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
+      localStorage.setItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_ONBOARDING_COMPLETED}`, "true");
     } else if (step === STEPS.ADD_THEME_BLOCK) {
-      localStorage.setItem(STORAGE_KEYS.IS_THEME_BLOCK_ADDED, "true");
+      localStorage.setItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_THEME_BLOCK_ADDED}`, "true");
     }
 
     setItems((prev) =>
@@ -75,16 +75,16 @@ export default function Onboarding({ THEME_EXTENSION_ID, THEME_APP_EXTENSION_NAM
   const handleDismiss = async (id) => {
     if (!id) {
       setShowGuide(false);
-      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
+      localStorage.setItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_ONBOARDING_COMPLETED}`, "true");
       return;
     }
 
     if (id === STEPS.INSTALL_APP) {
-      localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
+      localStorage.setItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_ONBOARDING_COMPLETED}`, "true");
     }
 
     if (id === STEPS.ADD_THEME_BLOCK) {
-      localStorage.setItem(STORAGE_KEYS.IS_THEME_BLOCK_ADDED, "true");
+      localStorage.setItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_THEME_BLOCK_ADDED}`, "true");
     }
 
     const currentIndex = items.findIndex((item) => item.id === id);
@@ -123,7 +123,7 @@ export default function Onboarding({ THEME_EXTENSION_ID, THEME_APP_EXTENSION_NAM
 
       switch (id) {
         case STEPS.INSTALL_APP:
-          localStorage.setItem(STORAGE_KEYS.IS_ONBOARDING_COMPLETED, "true");
+          localStorage.setItem(`${shopify.config.shop}-${STORAGE_KEYS.IS_ONBOARDING_COMPLETED}`, "true");
           completeStep(id);
           break;
         case STEPS.ADD_THEME_BLOCK:
