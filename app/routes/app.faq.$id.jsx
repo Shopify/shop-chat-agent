@@ -17,8 +17,12 @@ import { questions } from "../mockData/questions";
 
 export const loader = async ({ params }) => {
   const { id } = params;
-  const question = questions.find((question) => question.id === id);
-  return question;
+  if (params.id && params.id !== "new") {
+    const question = questions.find((question) => question.id === id);
+    return question;
+  }
+
+  return { question: "", answer: "" };
 };
 
 export default function Faq() {
