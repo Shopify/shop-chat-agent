@@ -8,8 +8,11 @@ import {
   Text,
 } from "@shopify/polaris";
 import "./suggestion.css";
+import { useNavigate } from "@remix-run/react";
 
 export const TopUnansweredQuestions = ({ unansweredQuestions }) => {
+  const navigate = useNavigate();
+
   return (
     <BlockStack gap="200">
       <Text as="h3" variant="headingMd">
@@ -19,7 +22,12 @@ export const TopUnansweredQuestions = ({ unansweredQuestions }) => {
         <BlockStack gap="150">
           {unansweredQuestions.map((question, index) => (
             <div key={question.id}>
-              <button className="suggestion">
+              <button
+                className="suggestion"
+                onClick={() => {
+                  navigate(`/app/faq/${question.id}`);
+                }}
+              >
                 <Box padding="300" width="100%">
                   <InlineStack gap="200" align="start">
                     <div>

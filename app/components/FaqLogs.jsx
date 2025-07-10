@@ -1,3 +1,4 @@
+import { useNavigate } from "@remix-run/react";
 import {
   BlockStack,
   EmptyState,
@@ -13,6 +14,7 @@ import { useState, useMemo } from "react";
 
 export const FaqLogs = ({ logs }) => {
   const [selectedTab, setSelectedTab] = useState(0);
+  const navigate = useNavigate();
 
   // Filter logs based on selected tab
   const filteredLogs = useMemo(() => {
@@ -87,7 +89,13 @@ export const FaqLogs = ({ logs }) => {
           <Box width="20ch">
             <Text variant="bodyMd" as="span" truncate>
               {answered ? (
-                <Link to={`/app/faq/${id}`}>{answer}</Link>
+                <Link
+                  onClick={() => {
+                    navigate(`/app/faq/${id}`);
+                  }}
+                >
+                  {answer}
+                </Link>
               ) : (
                 <Text variant="bodyMd" as="span" truncate tone="critical">
                   Unanswered
