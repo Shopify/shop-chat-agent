@@ -1,7 +1,7 @@
 import { Page, Layout, Text, Card, BlockStack } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import Onboarding from "../components/Onboarding";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useNavigate } from "@remix-run/react";
 
 export const loader = async () => {
   return {
@@ -14,9 +14,15 @@ export const loader = async () => {
 
 export default function Index() {
   const { env } = useLoaderData();
+  const navigate = useNavigate();
 
   return (
-    <Page>
+    <Page
+      primaryAction={{
+        content: "Add FAQ",
+        onAction: () => navigate("/app/faq/new"),
+      }}
+    >
       <TitleBar title="Shop chat agent reference app"></TitleBar>
       <BlockStack gap="500">
         <Layout>
@@ -41,6 +47,8 @@ export default function Index() {
           THEME_EXTENSION_ID={env.THEME_EXTENSION_ID}
           THEME_APP_EXTENSION_NAME={env.THEME_APP_EXTENSION_NAME}
         />
+
+
       </BlockStack>
     </Page>
   );
