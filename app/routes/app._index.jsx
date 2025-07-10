@@ -27,7 +27,6 @@ export default function Index() {
         content: "Add FAQ",
         onAction: () => navigate("/app/faq/new"),
       }}
-      fullWidth
     >
       <TitleBar title="Shop chat agent reference app"></TitleBar>
       <BlockStack gap="500">
