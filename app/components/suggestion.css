@@ -1,0 +1,11 @@
+.suggestion {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+.suggestion:hover {
+  background-color: var(--p-color-bg-surface-secondary-hover);
+}
