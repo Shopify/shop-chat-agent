@@ -1,4 +1,9 @@
-import { Form, useNavigate, useNavigation } from "@remix-run/react";
+import {
+  Form,
+  useLoaderData,
+  useNavigate,
+  useNavigation,
+} from "@remix-run/react";
 import {
   BlockStack,
   Button,
@@ -8,11 +13,20 @@ import {
   TextField,
 } from "@shopify/polaris";
 import { useState } from "react";
+import { questions } from "../mockData/questions";
+
+export const loader = async ({ params }) => {
+  const { id } = params;
+  const question = questions.find((question) => question.id === id);
+  return question;
+};
 
 export default function Faq() {
   const navigate = useNavigate();
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const data = useLoaderData();
+
+  const [question, setQuestion] = useState(data.question);
+  const [answer, setAnswer] = useState(data.answer);
   const navigation = useNavigation();
 
   const loading = navigation.state === "submitting";
