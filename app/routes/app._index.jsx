@@ -13,11 +13,12 @@ export const loader = async () => {
       THEME_APP_EXTENSION_NAME: process.env.THEME_APP_EXTENSION_NAME,
     },
     unansweredQuestions: questions.slice(0, 7),
+    logs: questions.slice(0, 2),
   };
 };
 
 export default function Index() {
-  const { env, unansweredQuestions } = useLoaderData();
+  const { env, unansweredQuestions, logs } = useLoaderData();
   const navigate = useNavigate();
 
   return (
@@ -41,7 +42,7 @@ export default function Index() {
           </Layout.Section>
 
           <Layout.Section variant="oneHalf">
-            <FaqLogs />
+            <FaqLogs logs={logs} />
           </Layout.Section>
         </Layout>
       </BlockStack>
