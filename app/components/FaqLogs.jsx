@@ -22,9 +22,9 @@ export const FaqLogs = ({ logs }) => {
       case 0: // All
         return logs;
       case 1: // Answered
-        return logs.filter((log) => log.answered);
+        return logs.filter((log) => log.answer);
       case 2: // Unanswered
-        return logs.filter((log) => !log.answered);
+        return logs.filter((log) => !log.answer);
       default:
         return logs;
     }
@@ -38,18 +38,6 @@ export const FaqLogs = ({ logs }) => {
 
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(filteredLogs);
-
-  // Prepare data for IndexTable
-  const tableData = useMemo(() => {
-    return filteredLogs.map((log, index) => ({
-      id: log.id,
-      question: log.question,
-      answer: log.answer || "No answer provided",
-      status: log.answered ? "Answered" : "Unanswered",
-      date: log.date,
-      answered: log.answered,
-    }));
-  }, [filteredLogs]);
 
   const tabs = [
     {
@@ -72,59 +60,58 @@ export const FaqLogs = ({ logs }) => {
     },
   ];
 
-  const rowMarkup = tableData.map(
-    ({ id, question, answer, status, date, answered }, index) => (
-      <IndexTable.Row
-        id={id}
-        key={id}
-        selected={selectedResources.includes(id)}
-        position={index}
-      >
-        <IndexTable.Cell>
-          <Text variant="bodyMd" fontWeight="bold" as="span">
-            {question}
+  const rowMarkup = filteredLogs.map((faq, index) => (
+    <IndexTable.Row
+      id={faq.id}
+      key={faq.id}
+      selected={selectedResources.includes(faq.id)}
+      position={index}
+    >
+      <IndexTable.Cell>
+        <Text variant="bodyMd" fontWeight="bold" as="span">
+          {faq.question}
+        </Text>
+      </IndexTable.Cell>
+      <IndexTable.Cell>
+        <Box width="20ch">
+          <Text variant="bodyMd" as="span" truncate>
+            {faq.answer ? (
+              <Link
+                onClick={() => {
+                  navigate(`/app/faq/${faq.id}`);
+                }}
+              >
+                {faq.answer}
+              </Link>
+            ) : (
+              <Text variant="bodyMd" as="span" truncate tone="critical">
+                Unanswered
+              </Text>
+            )}
           </Text>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <Box width="20ch">
-            <Text variant="bodyMd" as="span" truncate>
-              {answered ? (
-                <Link
-                  onClick={() => {
-                    navigate(`/app/faq/${id}`);
-                  }}
-                >
-                  {answer}
-                </Link>
-              ) : (
-                <Text variant="bodyMd" as="span" truncate tone="critical">
-                  Unanswered
-                </Text>
-              )}
-            </Text>
-          </Box>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <Text variant="bodyMd" as="span">
-            {new Date(date)
-              .toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-              .replace(/(\d+),/, (match, p1) => {
-                const day = parseInt(p1, 10);
-                let suffix = "th";
-                if (day % 10 === 1 && day % 100 !== 11) suffix = "st";
-                else if (day % 10 === 2 && day % 100 !== 12) suffix = "nd";
-                else if (day % 10 === 3 && day % 100 !== 13) suffix = "rd";
-                return ` ${day}${suffix},`;
-              })}
-          </Text>
-        </IndexTable.Cell>
-      </IndexTable.Row>
-    ),
-  );
+        </Box>
+      </IndexTable.Cell>
+      <IndexTable.Cell>
+        {console.log(faq)}
+        <Text variant="bodyMd" as="span">
+          {new Date(faq.createdAt)
+            .toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+            .replace(/(\d+),/, (match, p1) => {
+              const day = parseInt(p1, 10);
+              let suffix = "th";
+              if (day % 10 === 1 && day % 100 !== 11) suffix = "st";
+              else if (day % 10 === 2 && day % 100 !== 12) suffix = "nd";
+              else if (day % 10 === 3 && day % 100 !== 13) suffix = "rd";
+              return ` ${day}${suffix},`;
+            })}
+        </Text>
+      </IndexTable.Cell>
+    </IndexTable.Row>
+  ));
 
   if (logs.length === 0) {
     return (
@@ -162,7 +149,7 @@ export const FaqLogs = ({ logs }) => {
           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
             <IndexTable
               resourceName={resourceName}
-              itemCount={tableData.length}
+              itemCount={filteredLogs.length}
               selectedItemsCount={
                 allResourcesSelected ? "All" : selectedResources.length
               }

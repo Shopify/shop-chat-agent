@@ -23,12 +23,14 @@ export const loader = async ({ request }) => {
     prisma.faq.findMany({
       where: {
         merchantId: merchant.id,
-        answer: null,
+        answer: {
+          equals: null,
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
-      take: 7,
+      take: 20,
     }),
     prisma.faq.findMany({
       where: {
@@ -36,6 +38,12 @@ export const loader = async ({ request }) => {
       },
       orderBy: {
         createdAt: "desc",
+      },
+      select: {
+        id: true,
+        question: true,
+        answer: true,
+        createdAt: true,
       },
       take: 20,
     }),
