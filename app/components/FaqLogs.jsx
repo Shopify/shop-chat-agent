@@ -144,6 +144,7 @@ export const FaqLogs = ({ logs }) => {
         <div
           style={{
             height: "345px",
+            overflowY: "auto",
           }}
         >
           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
