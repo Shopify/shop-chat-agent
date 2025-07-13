@@ -1,5 +1,6 @@
 import {
   Form,
+  redirect,
   useLoaderData,
   useNavigate,
   useNavigation,
@@ -13,16 +14,80 @@ import {
   TextField,
 } from "@shopify/polaris";
 import { useState } from "react";
+import prisma from "../db.server";
 import { questions } from "../mockData/questions";
+import { authenticate } from "../shopify.server";
 
-export const loader = async ({ params }) => {
+export const loader = async ({ request, params }) => {
+  const { session } = await authenticate.admin(request);
   const { id } = params;
+
+  const merchant = await prisma.merchant.findUnique({
+    where: {
+      shop: session.shop,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!merchant) {
+    throw new Response("Merchant not found", { status: 404 });
+  }
+
   if (params.id && params.id !== "new") {
-    const question = questions.find((question) => question.id === id);
+    const question = await prisma.faq.findUnique({
+      where: {
+        id,
+        merchantId: merchant.id,
+      },
+    });
+
     return question;
   }
 
   return { question: "", answer: "" };
+};
+
+export const action = async ({ request, params }) => {
+  const { session } = await authenticate.admin(request);
+  const { id } = params;
+
+  const merchant = await prisma.merchant.findUnique({
+    where: {
+      shop: session.shop,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!merchant) {
+    throw new Response("Merchant not found", { status: 404 });
+  }
+  const formData = await request.formData();
+  const question = formData.get("question");
+  const answer = formData.get("answer");
+
+  if (id === "new") {
+    await prisma.faq.create({
+      data: {
+        merchantId: merchant.id,
+        question,
+        answer,
+      },
+    });
+  } else {
+    await prisma.faq.update({
+      where: { id, merchantId: merchant.id },
+      data: {
+        question,
+        answer,
+      },
+    });
+  }
+
+  return redirect(`/app?shop=${session.shop}`);
 };
 
 export default function Faq() {
@@ -40,9 +105,9 @@ export default function Faq() {
       title="Add new FAQ"
       backAction={{ content: "Back", onAction: () => navigate("/app") }}
     >
-      <BlockStack gap="800">
-        <Card>
-          <Form>
+      <Form method="post">
+        <BlockStack gap="800">
+          <Card>
             <BlockStack gap="300">
               <TextField
                 label="Question"
@@ -60,19 +125,19 @@ export default function Faq() {
                 onChange={(value) => setAnswer(value)}
               />
             </BlockStack>
-          </Form>
-        </Card>
-        <InlineStack align="end">
-          <Button
-            loading={loading}
-            variant="primary"
-            onClick={() => navigate("/app")}
-            disabled={!question || !answer}
-          >
-            Save
-          </Button>
-        </InlineStack>
-      </BlockStack>
+          </Card>
+          <InlineStack align="end">
+            <Button
+              loading={loading}
+              variant="primary"
+              submit
+              disabled={!question || !answer}
+            >
+              Save
+            </Button>
+          </InlineStack>
+        </BlockStack>
+      </Form>
     </Page>
   );
 }
