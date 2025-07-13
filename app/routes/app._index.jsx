@@ -1,4 +1,4 @@
-import { Page, Layout, BlockStack } from "@shopify/polaris";
+import { Page, Layout, BlockStack, Box } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import Onboarding from "../components/Onboarding";
 import { useLoaderData, useNavigate } from "@remix-run/react";
@@ -76,22 +76,26 @@ export default function Index() {
       fullWidth
     >
       <TitleBar title="Shop chat agent reference app"></TitleBar>
-      <BlockStack gap="500">
-        <Onboarding
-          THEME_EXTENSION_ID={env.THEME_EXTENSION_ID}
-          THEME_APP_EXTENSION_NAME={env.THEME_APP_EXTENSION_NAME}
-        />
+      <Box paddingBlockEnd="300">
+        <BlockStack gap="500">
+          <Onboarding
+            THEME_EXTENSION_ID={env.THEME_EXTENSION_ID}
+            THEME_APP_EXTENSION_NAME={env.THEME_APP_EXTENSION_NAME}
+          />
 
-        <Layout>
-          <Layout.Section variant="oneThird">
-            <TopUnansweredQuestions unansweredQuestions={unansweredQuestions} />
-          </Layout.Section>
+          <Layout>
+            <Layout.Section variant="oneThird">
+              <TopUnansweredQuestions
+                unansweredQuestions={unansweredQuestions}
+              />
+            </Layout.Section>
 
-          <Layout.Section variant="oneHalf">
-            <FaqLogs logs={logs} />
-          </Layout.Section>
-        </Layout>
-      </BlockStack>
+            <Layout.Section variant="oneHalf">
+              <FaqLogs logs={logs} />
+            </Layout.Section>
+          </Layout>
+        </BlockStack>
+      </Box>
     </Page>
   );
 }

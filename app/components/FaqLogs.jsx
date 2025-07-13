@@ -143,7 +143,7 @@ export const FaqLogs = ({ logs }) => {
       <Card padding="0">
         <div
           style={{
-            minHeight: "395px",
+            height: "345px",
           }}
         >
           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
