@@ -1,13 +1,13 @@
 .popShopProgressBar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
 }
-@media screen and (max-width: 900px)  {
-    .popShopProgressBar {
-        width: 100%
-    }
+@media screen and (max-width: 900px) {
+  .popShopProgressBar {
+    width: 100%;
+  }
 }
 
 .header {
@@ -41,14 +41,14 @@
 }
 
 .openStep {
-  background: #FAFAFA;
-  border: 1px solid #E1E3E5;
+  background: #fafafa;
+  border: 1px solid #e1e3e5;
   border-radius: 8px;
 }
 
 .openStep .stepHeader {
-    padding: 1.6rem;
-    padding-bottom: 1.2rem;
+  padding: 1.6rem;
+  padding-bottom: 1.2rem;
 }
 
 .stepContent {

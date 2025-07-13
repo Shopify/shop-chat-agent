@@ -29,6 +29,24 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+  
+  @@index([shop])
+}
+
+enum MerchantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Merchant {
+  id        String    @id @default(cuid())
+  shop      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  status    MerchantStatus @default(ACTIVE)
+  faqs      Faq[]
+
+  @@index([shop])
 }
 
 model CustomerToken {
@@ -77,4 +95,16 @@ model CustomerAccountUrl {
   url            String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model Faq {
+  id        String    @id @default(cuid())
+  question  String
+  answer    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  merchantId String
+  merchant   Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
 }
