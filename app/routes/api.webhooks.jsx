@@ -17,6 +17,10 @@ export const action = async ({ request }) => {
         });
       }
       break;
+    case "SHOP_REDACT":
+    case "CUSTOMERS_DATA_REQUEST":
+    case "CUSTOMERS_REDACT":
+      return new Response(null, { status: 200 });
     default:
       throw new Response("Unhandled webhook topic", { status: 404 });
   }
