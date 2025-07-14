@@ -22,7 +22,13 @@ import {
 } from "@shopify/polaris-icons";
 import { SetupItem } from "./SetupGuide";
 
-export const SetupGuide = ({ onForceComplete, items, setExpanded, handleSubmit, handleDismiss }) => {
+export const SetupGuide = ({
+  onForceComplete,
+  items,
+  setExpanded,
+  handleSubmit,
+  handleDismiss,
+}) => {
   const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [popoverActive, setPopoverActive] = useState(false);
 
@@ -54,7 +60,7 @@ export const SetupGuide = ({ onForceComplete, items, setExpanded, handleSubmit, 
                   items={[
                     {
                       content: "Dismiss",
-                      onAction: ()=>handleDismiss(),
+                      onAction: () => handleDismiss(),
                       prefix: (
                         <div
                           style={{
@@ -82,7 +88,7 @@ export const SetupGuide = ({ onForceComplete, items, setExpanded, handleSubmit, 
             </ButtonGroup>
           </InlineStack>
           <Text as="p" variant="bodyMd">
-            CUse personalized guide to get your app up and running
+            Use personalized guide to get your app up and running
           </Text>
           <div style={{ marginTop: ".8rem" }}>
             <InlineStack blockAlign="center" gap="200">
