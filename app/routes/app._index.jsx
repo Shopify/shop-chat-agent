@@ -75,7 +75,7 @@ export default function Index() {
       }}
       fullWidth
     >
-      <TitleBar title="Shop chat agent reference app"></TitleBar>
+      <TitleBar title="Conversight AI agent"></TitleBar>
       <Box paddingBlockEnd="300">
         <BlockStack gap="500">
           <Onboarding
