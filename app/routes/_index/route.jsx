@@ -19,10 +19,7 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>Shop chat agent reference app</h1>
-        <p className={styles.text}>
-          A reference app for shop chat agent.
-        </p>
+        <h1 className={styles.heading}>Conversight AI agent</h1>
       </div>
     </div>
   );
