@@ -13,10 +13,17 @@ automatically_update_urls_on_dev = true
 [webhooks]
 api_version = "2025-04"
 
-[webhooks.privacy_compliance]
-  customer_deletion_url = "https://epsichatagent-199342217169.europe-west2.run.app/webhooks"
-  customer_data_request_url = "https://epsichatagent-199342217169.europe-west2.run.app/webhooks"
-  shop_deletion_url = "https://epsichatagent-199342217169.europe-west2.run.app/webhooks"
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "/webhooks/compliance"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
