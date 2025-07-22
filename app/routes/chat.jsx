@@ -128,12 +128,12 @@ async function handleChatSession({
   stream
 }) {
   // Initialize services
+  const shopDomain = window.Shopify.shop;
   const claudeService = createClaudeService();
-  const toolService = createToolService();
+  const toolService = createToolService(shopDomain);
 
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
-  const shopDomain = request.headers.get("Origin");
   const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
   const mcpClient = new MCPClient(
     shopDomain,
@@ -164,7 +164,7 @@ async function handleChatSession({
     let productsToDisplay = [];
 
     // Save user message to the database
-    await saveMessage(conversationId, 'user', userMessage);
+    await saveMessage(conversationId, 'user', userMessage, shopDomain);
 
     // Fetch all messages from the database for this conversation
     const dbMessages = await getConversationHistory(conversationId);
@@ -209,7 +209,7 @@ async function handleChatSession({
               content: message.content
             });
 
-            saveMessage(conversationId, message.role, JSON.stringify(message.content))
+            saveMessage(conversationId, message.role, JSON.stringify(message.content), shopDomain)
               .catch((error) => {
                 console.error("Error saving message to database:", error);
               });

@@ -9,7 +9,7 @@ import AppConfig from "./config.server";
  * Creates a tool service instance
  * @returns {Object} Tool service with methods for managing tools
  */
-export function createToolService() {
+export function createToolService(shop) {
   /**
    * Handles a tool error response
    * @param {Object} toolUseResponse - The error response from the tool
@@ -133,7 +133,7 @@ export function createToolService() {
     // Save to database with special format to indicate tool result
     if (conversationId) {
       try {
-        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content));
+        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content), shop);
       } catch (error) {
         console.error('Error saving tool result to database:', error);
       }

@@ -135,11 +135,12 @@ export async function getCustomerToken(conversationId) {
 }
 
 /**
- * Create or update a conversation in the database
+ * Create or update a conversation
  * @param {string} conversationId - The conversation ID
- * @returns {Promise<Object>} - The created or updated conversation
+ * @param {string} shop - The shop domain
+ * @returns {Promise<Object>} - The conversation object
  */
-export async function createOrUpdateConversation(conversationId) {
+export async function createOrUpdateConversation(conversationId, shop) {
   try {
     const existingConversation = await prisma.conversation.findUnique({
       where: { id: conversationId }
@@ -154,9 +155,18 @@ export async function createOrUpdateConversation(conversationId) {
       });
     }
 
+    const merchant = await prisma.merchant.findUnique({
+      where: { shop }
+    });
+
+    if (!merchant) {
+      throw new Error('Merchant not found');
+    }
+
     return await prisma.conversation.create({
       data: {
-        id: conversationId
+        id: conversationId,
+        merchantId: merchant.id
       }
     });
   } catch (error) {
@@ -170,12 +180,13 @@ export async function createOrUpdateConversation(conversationId) {
  * @param {string} conversationId - The conversation ID
  * @param {string} role - The message role (user or assistant)
  * @param {string} content - The message content
+ * @param {string} shop - The shop domain
  * @returns {Promise<Object>} - The saved message
  */
-export async function saveMessage(conversationId, role, content) {
+export async function saveMessage(conversationId, role, content, shop) {
   try {
     // Ensure the conversation exists
-    await createOrUpdateConversation(conversationId);
+    await createOrUpdateConversation(conversationId, shop);
 
     // Create the message
     return await prisma.message.create({
