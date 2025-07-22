@@ -45,6 +45,7 @@ model Merchant {
   updatedAt DateTime  @updatedAt
   status    MerchantStatus @default(ACTIVE)
   faqs      Faq[]
+  conversations Conversation[]
 
   @@index([shop])
 }
@@ -73,9 +74,13 @@ model CodeVerifier {
 
 model Conversation {
   id        String    @id
+  merchantId String?
+  merchant   Merchant?  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([merchantId])
 }
 
 model Message {
