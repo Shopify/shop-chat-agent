@@ -45,7 +45,6 @@ export const loader = async ({ request }) => {
         answer: true,
         createdAt: true,
       },
-      take: 20,
     }),
   ]);
 
