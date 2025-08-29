@@ -6,9 +6,26 @@
 export const AppConfig = {
   // API Configuration
   api: {
-    defaultModel: 'claude-3-5-sonnet-latest',
+    llmProvider: 'claude', // Default LLM provider
     maxTokens: 2000,
     defaultPromptType: 'standardAssistant',
+    providers: {
+      claude: {
+        model: 'claude-3-5-sonnet-latest',
+      },
+      openai: {
+        model: 'gpt-4-turbo',
+      },
+      gemini: {
+        model: 'gemini-1.5-flash-latest',
+      },
+      groq: {
+        model: 'llama3-8b-8192',
+      },
+      openrouter: {
+        model: 'anthropic/claude-3.5-sonnet',
+      },
+    },
   },
 
   // Error Message Templates
