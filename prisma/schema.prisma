@@ -78,3 +78,16 @@ model CustomerAccountUrl {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+model ShopSettings {
+  id               String    @id @default(cuid())
+  shop             String    @unique
+  llmProvider      String    @default("claude")
+  claudeApiKey     String?
+  openaiApiKey     String?
+  geminiApiKey     String?
+  groqApiKey       String?
+  openrouterApiKey String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
