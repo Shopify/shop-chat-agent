@@ -30,7 +30,7 @@ A Shopify template app that lets you embed an AI-powered chat widget on your sto
 ### Components
 This app consists of two main components:
 
-1. **Backend**: A Remix app server that handles communication with Claude, processes chat messages, and acts as an MCP Client.
+1. **Backend**: A Remix app server that handles communication with your chosen LLM, processes chat messages, and acts as an MCP Client.
 2. **Chat UI**: A Shopify theme extension that provides the customer-facing chat interface.
 
 When you start the app, it will:
@@ -47,7 +47,7 @@ For direct testing, point your test suite at the `/chat` endpoint (GET or POST f
 
 ### Tech Stack
 - **Framework**: [Remix](https://remix.run/)
-- **AI**: [Claude by Anthropic](https://www.anthropic.com/claude)
+- **AI**: Multi-provider support (Claude, OpenAI, Gemini, Groq, OpenRouter)
 - **Shopify Integration**: [@shopify/shopify-app-remix](https://www.npmjs.com/package/@shopify/shopify-app-remix)
 - **Database**: SQLite (via Prisma) for session storage
 
@@ -57,7 +57,14 @@ This repo can be customized. You can:
 - Change the chat widget UI
 - Swap out the LLM
 
-You can learn how from our [dev docs](https://shopify.dev/docs/apps/build/storefront-mcp).
+### Swap out the LLM
+You can configure your desired LLM provider and API keys from the app's admin dashboard.
+1.  Navigate to the app's settings page in your Shopify admin.
+2.  Select your preferred provider from the dropdown menu (Claude, OpenAI, Gemini, Groq, OpenRouter).
+3.  Enter your API key for the selected provider.
+4.  Click "Save".
+
+The chat agent will now use the configured provider and API key. If no settings are configured in the admin, the app will fall back to the provider and key specified in your environment variables.
 
 ## Deployment
 Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
