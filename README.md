@@ -70,4 +70,4 @@ The chat agent will now use the configured provider and API key. If no settings 
 Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
 
 ## Contributing
-We appreciate your interest in contributing to this project. As this is an example repository intended for educational and reference purposes, we are not accepting contributions.
+We appreciate your interest in contributing to this project. As this is a forked repository from the official Shopify repository, any contributions are highly welcome.
