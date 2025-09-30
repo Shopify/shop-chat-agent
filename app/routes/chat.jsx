@@ -3,12 +3,11 @@
  * Handles chat interactions with Claude API and tools
  */
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustomerAccountUrl } from "../db.server";
+import { saveMessage, getConversationHistory, storeCustomerAccountEndpoints, getCustomerAccountEndpoints } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
-import { unauthenticated } from "../shopify.server";
 
 
 /**
@@ -127,12 +126,13 @@ async function handleChatSession({
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
   const shopDomain = request.headers.get("Origin");
-  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
+  const { mcpApi } = await getCustomerAccountUrls(shopDomain, conversationId);
+
   const mcpClient = new MCPClient(
     shopDomain,
     conversationId,
     shopId,
-    customerMcpEndpoint
+    mcpApi,
   );
 
   try {
@@ -287,38 +287,38 @@ async function handleChatSession({
  * @param {string} conversationId - The conversation ID
  * @returns {string} The customer MCP endpoint
  */
-async function getCustomerMcpEndpoint(shopDomain, conversationId) {
+async function getCustomerAccountUrls(shopDomain, conversationId) {
   try {
     // Check if the customer account URL exists in the DB
-    const existingUrl = await getCustomerAccountUrl(conversationId);
+    const existingEndpoints = await getCustomerAccountEndpoints(conversationId);
 
     // If URL exists, return early with the MCP endpoint
-    if (existingUrl) {
-      return `${existingUrl}/customer/api/mcp`;
-    }
+    if (existingEndpoints) return existingEndpoints;
 
     // If not, query for it from the Shopify API
     const { hostname } = new URL(shopDomain);
-    const { storefront } = await unauthenticated.storefront(
-      hostname
-    );
 
-    const response = await storefront.graphql(
-      `#graphql
-      query shop {
-        shop {
-          customerAccountUrl
-        }
-      }`,
-    );
+    const endpoints = await Promise.all([
+      fetch(`https://${hostname}/.well-known/customer-account-api`).then(res => res.json()),
+      fetch(`https://${hostname}/.well-known/openid-configuration`).then(res => res.json()),
+    ]).then(async ([mcpResponse, openidResponse]) => {
+      const response = {
+        mcpApi: mcpResponse.mcp_api,
+        authorizationEndpoint: openidResponse.authorization_endpoint,
+        tokenEndpoint: openidResponse.token_endpoint,
+      };
 
-    const body = await response.json();
-    const customerAccountUrl = body.data.shop.customerAccountUrl;
+      await storeCustomerAccountEndpoints({
+        conversationId,
+        mcpApi: mcpResponse.mcp_api,
+        authorizationEndpoint: openidResponse.authorization_endpoint,
+        tokenEndpoint: openidResponse.token_endpoint,
+      });
 
-    // Store the customer account URL with conversation ID in the DB
-    await storeCustomerAccountUrl(conversationId, customerAccountUrl);
+      return response;
+    });
 
-    return `${customerAccountUrl}/customer/api/mcp`;
+    return endpoints;
   } catch (error) {
     console.error("Error getting customer MCP endpoint:", error);
     return null;
