@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { getCodeVerifier, storeCustomerToken } from "../db.server";
 
 /**
@@ -11,7 +10,7 @@ export async function loader({ request }) {
   const [conversationId, shopId] = state.split("-");
 
   if (!code) {
-    return json({ error: "Authorization code is missing" }, { status: 400 });
+    return new Response(JSON.stringify({ error: "Authorization code is missing" }), { status: 400 });
   }
 
   try {
@@ -81,7 +80,7 @@ export async function loader({ request }) {
   } catch (error) {
     console.error("Error exchanging code for token:", error);
     console.log("shopId", shopId);
-    return json({ error: "Failed to obtain access token" }, { status: 500 });
+    return new Response(JSON.stringify({ error: "Failed to obtain access token" }), { status: 500 });
   }
 }
 

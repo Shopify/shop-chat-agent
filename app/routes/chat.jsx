@@ -2,7 +2,6 @@
  * Chat API Route
  * Handles chat interactions with Claude API and tools
  */
-import { json } from "@remix-run/node";
 import MCPClient from "../mcp-client";
 import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustomerAccountUrl } from "../db.server";
 import AppConfig from "../services/config.server";
@@ -13,7 +12,7 @@ import { unauthenticated } from "../shopify.server";
 
 
 /**
- * Remix loader function for handling GET requests
+ * Rract Router loader function for handling GET requests
  */
 export async function loader({ request }) {
   // Handle OPTIONS requests (CORS preflight)
@@ -37,14 +36,11 @@ export async function loader({ request }) {
   }
 
   // API-only: reject all other requests
-  return json(
-    { error: AppConfig.errorMessages.apiUnsupported },
-    { status: 400, headers: getCorsHeaders(request) }
-  );
+  return new Response(JSON.stringify({ error: AppConfig.errorMessages.apiUnsupported }), { status: 400, headers: getCorsHeaders(request) });
 }
 
 /**
- * Remix action function for handling POST requests
+ * React Router action function for handling POST requests
  */
 export async function action({ request }) {
   return handleChatRequest(request);
@@ -59,10 +55,7 @@ export async function action({ request }) {
 async function handleHistoryRequest(request, conversationId) {
   const messages = await getConversationHistory(conversationId);
 
-  return json(
-    { messages },
-    { headers: getCorsHeaders(request) }
-  );
+  return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request) });
 }
 
 /**
@@ -104,7 +97,7 @@ async function handleChatRequest(request) {
     });
   } catch (error) {
     console.error('Error in chat request handler:', error);
-    return json({ error: error.message }, {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: getCorsHeaders(request)
     });
