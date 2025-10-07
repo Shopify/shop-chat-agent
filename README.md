@@ -2,7 +2,8 @@
 
 A Shopify template app that lets you embed an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies or shipping, and complete purchases - all without leaving the conversation. Under the hood it speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to tap into Shopify’s APIs.
 
-### Overview
+## Overview
+
 - **What it is**: A chat widget + backend that turns any storefront into an AI shopping assistant.
 - **Key features**:
   - Natural-language product discovery
@@ -30,11 +31,11 @@ A Shopify template app that lets you embed an AI-powered chat widget on your sto
 ### Components
 This app consists of two main components:
 
-1. **Backend**: A Remix app server that handles communication with Claude, processes chat messages, and acts as an MCP Client.
+1. **Backend**: A React Router app server that handles communication with Claude, processes chat messages, and acts as an MCP Client.
 2. **Chat UI**: A Shopify theme extension that provides the customer-facing chat interface.
 
 When you start the app, it will:
-- Start Remix in development mode.
+- Start React Router in development mode.
 - Tunnel your local server so Shopify can reach it.
 - Provide a preview URL to install the app on your development store.
 
@@ -46,9 +47,9 @@ For direct testing, point your test suite at the `/chat` endpoint (GET or POST f
 - More in our [dev docs](https://shopify.dev/docs/apps/build/storefront-mcp).
 
 ### Tech Stack
-- **Framework**: [Remix](https://remix.run/)
+- **Framework**: [React Router](https://reactrouter.com/)
 - **AI**: [Claude by Anthropic](https://www.anthropic.com/claude)
-- **Shopify Integration**: [@shopify/shopify-app-remix](https://www.npmjs.com/package/@shopify/shopify-app-remix)
+- **Shopify Integration**: [@shopify/shopify-app-react-router](https://www.npmjs.com/package/@shopify/shopify-app-react-router)
 - **Database**: SQLite (via Prisma) for session storage
 
 ## Customizations
