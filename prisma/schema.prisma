@@ -71,12 +71,12 @@ model Message {
   @@index([conversationId])
 }
 
-model CustomerAccountEndpoints {
-  id                        String    @id @default(cuid())
-  conversationId            String    @unique
-  mcpApi                    String?
-  authorizationEndpoint     String?
-  tokenEndpoint             String?
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
+model CustomerAccountUrls {
+  id               String    @id @default(cuid())
+  conversationId   String    @unique
+  mcpApiUrl        String?
+  authorizationUrl String?
+  tokenUrl         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }

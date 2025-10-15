@@ -67,16 +67,16 @@ Follow standard Shopify app deployment procedures as outlined in the [Shopify do
 
 ### Customer Account Endpoint Issues
 
-The app caches Customer Account API endpoints (MCP API, authorization, and token endpoints) in the Prisma database after discovering them from Shopify's well-known URLs. If these endpoints change or you encounter authentication issues:
+The app caches Customer Account API endpoints (MCP API, authorization, and token URLs) in the Prisma database after discovering them from Shopify's well-known URLs. If these URLs change or you encounter authentication issues:
 
-1. Clear the Prisma database to force a refetch of the endpoints:
+1. Clear the Prisma database to force a refetch of the URLs:
    ```bash
    npx prisma migrate reset
    ```
 
 2. Restart your development server
 
-The app will automatically rediscover and cache the updated endpoints on the next conversation.
+The app will automatically rediscover and cache the updated URLs on the next conversation.
 
 ## Contributing
 We appreciate your interest in contributing to this project. As this is an example repository intended for educational and reference purposes, we are not accepting contributions.
