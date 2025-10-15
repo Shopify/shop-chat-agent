@@ -1,4 +1,4 @@
-import { getCodeVerifier, storeCustomerToken } from "../db.server";
+import { getCodeVerifier, storeCustomerToken, getCustomerAccountUrls } from "../db.server";
 
 /**
  * Handle OAuth callback from Shopify Customer API
@@ -99,7 +99,7 @@ async function exchangeCodeForToken(code, state) {
   const redirectUri = process.env.REDIRECT_URL;
 
   // Correct token URL format
-  const tokenUrl = await getTokenUrl(shopId, conversationId);
+  const tokenUrl = await getTokenUrl(conversationId);
 
   if (!tokenUrl) {
     throw new Error("Token URL not found");
@@ -158,27 +158,10 @@ async function exchangeCodeForToken(code, state) {
 
 /**
  * Get the token URL from the customer account URL
- * @param {string} shopId - The shop ID
  * @param {string} conversationId - The conversation ID
  * @returns {Promise<string|null>} - The token URL or null if not found
  */
-async function getTokenUrl(shopId, conversationId) {
-  const { getCustomerAccountUrl } = await import('../db.server');
-  const customerAccountUrl = await getCustomerAccountUrl(conversationId);
-  if (!customerAccountUrl) {
-    console.error('Customer account URL not found for conversation:', conversationId);
-    return null;
-  }
-
-  const endpoint = `${customerAccountUrl}/.well-known/oauth-authorization-server`;
-  const response = await fetch(endpoint);
-
-  if (!response.ok) {
-    console.error('Failed to fetch base auth URL from:', endpoint, response.status);
-
-    return null;
-  }
-
-  const data = await response.json();
-  return data.token_endpoint;
+async function getTokenUrl(conversationId) {
+  const { tokenUrl } = await getCustomerAccountUrls(conversationId);
+  return tokenUrl;
 }

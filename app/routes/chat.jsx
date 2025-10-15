@@ -3,12 +3,11 @@
  * Handles chat interactions with Claude API and tools
  */
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustomerAccountUrl } from "../db.server";
+import { saveMessage, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
-import { unauthenticated } from "../shopify.server";
 
 
 /**
@@ -127,12 +126,13 @@ async function handleChatSession({
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
   const shopDomain = request.headers.get("Origin");
-  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
+  const { mcpApiUrl } = await getCustomerAccountUrls(shopDomain, conversationId);
+
   const mcpClient = new MCPClient(
     shopDomain,
     conversationId,
     shopId,
-    customerMcpEndpoint
+    mcpApiUrl,
   );
 
   try {
@@ -282,45 +282,45 @@ async function handleChatSession({
 }
 
 /**
- * Get the customer MCP endpoint for a shop
+ * Get the customer MCP API URL for a shop
  * @param {string} shopDomain - The shop domain
  * @param {string} conversationId - The conversation ID
- * @returns {string} The customer MCP endpoint
+ * @returns {string} The customer MCP API URL
  */
-async function getCustomerMcpEndpoint(shopDomain, conversationId) {
+async function getCustomerAccountUrls(shopDomain, conversationId) {
   try {
     // Check if the customer account URL exists in the DB
-    const existingUrl = await getCustomerAccountUrl(conversationId);
+    const existingUrls = await getCustomerAccountUrlsFromDb(conversationId);
 
-    // If URL exists, return early with the MCP endpoint
-    if (existingUrl) {
-      return `${existingUrl}/customer/api/mcp`;
-    }
+    // If URL exists, return early with the MCP API URL
+    if (existingUrls) return existingUrls;
 
     // If not, query for it from the Shopify API
     const { hostname } = new URL(shopDomain);
-    const { storefront } = await unauthenticated.storefront(
-      hostname
-    );
 
-    const response = await storefront.graphql(
-      `#graphql
-      query shop {
-        shop {
-          customerAccountUrl
-        }
-      }`,
-    );
+    const urls = await Promise.all([
+      fetch(`https://${hostname}/.well-known/customer-account-api`).then(res => res.json()),
+      fetch(`https://${hostname}/.well-known/openid-configuration`).then(res => res.json()),
+    ]).then(async ([mcpResponse, openidResponse]) => {
+      const response = {
+        mcpApiUrl: mcpResponse.mcp_api,
+        authorizationUrl: openidResponse.authorization_endpoint,
+        tokenUrl: openidResponse.token_endpoint,
+      };
 
-    const body = await response.json();
-    const customerAccountUrl = body.data.shop.customerAccountUrl;
+      await storeCustomerAccountUrls({
+        conversationId,
+        mcpApiUrl: mcpResponse.mcp_api,
+        authorizationUrl: openidResponse.authorization_endpoint,
+        tokenUrl: openidResponse.token_endpoint,
+      });
 
-    // Store the customer account URL with conversation ID in the DB
-    await storeCustomerAccountUrl(conversationId, customerAccountUrl);
+      return response;
+    });
 
-    return `${customerAccountUrl}/customer/api/mcp`;
+    return urls;
   } catch (error) {
-    console.error("Error getting customer MCP endpoint:", error);
+    console.error("Error getting customer MCP API URL:", error);
     return null;
   }
 }

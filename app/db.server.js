@@ -211,45 +211,49 @@ export async function getConversationHistory(conversationId) {
 }
 
 /**
- * Store customer account URL for a conversation
+ * Store customer account URLs for a conversation
  * @param {string} conversationId - The conversation ID
- * @param {string} url - The customer account URL
- * @returns {Promise<Object>} - The saved URL object
+ * @param {string} mcpApiUrl - The customer account MCP URL
+ * @param {string} authorizationUrl - The customer account authorization URL
+ * @param {string} tokenUrl - The customer account token URL
+ * @returns {Promise<Object>} - The saved urls object
  */
-export async function storeCustomerAccountUrl(conversationId, url) {
+export async function storeCustomerAccountUrls({conversationId, mcpApiUrl, authorizationUrl, tokenUrl}) {
   try {
-    return await prisma.customerAccountUrl.upsert({
+    return await prisma.customerAccountUrls.upsert({
       where: { conversationId },
-      update: {
-        url,
-        updatedAt: new Date()
-      },
       create: {
         conversationId,
-        url,
-        updatedAt: new Date()
-      }
+        mcpApiUrl,
+        authorizationUrl,
+        tokenUrl,
+        updatedAt: new Date(),
+      },
+      update: {
+        mcpApiUrl,
+        authorizationUrl,
+        tokenUrl,
+        updatedAt: new Date(),
+      },
     });
   } catch (error) {
-    console.error('Error storing customer account URL:', error);
+    console.error('Error storing customer account URLs:', error);
     throw error;
   }
 }
 
 /**
- * Get customer account URL for a conversation
+ * Get customer account URLs for a conversation
  * @param {string} conversationId - The conversation ID
- * @returns {Promise<string|null>} - The customer account URL or null if not found
+ * @returns {Promise<Object|null>} - The customer account URLs or null if not found
  */
-export async function getCustomerAccountUrl(conversationId) {
+export async function getCustomerAccountUrls(conversationId) {
   try {
-    const record = await prisma.customerAccountUrl.findUnique({
+    return await prisma.customerAccountUrls.findUnique({
       where: { conversationId }
     });
-
-    return record?.url || null;
   } catch (error) {
-    console.error('Error retrieving customer account URL:', error);
+    console.error('Error retrieving customer account URLs:', error);
     return null;
   }
 }
