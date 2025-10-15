@@ -63,20 +63,5 @@ You can learn how from our [dev docs](https://shopify.dev/docs/apps/build/storef
 ## Deployment
 Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
 
-## Troubleshooting
-
-### Customer Account Endpoint Issues
-
-The app caches Customer Account API endpoints (MCP API, authorization, and token endpoints) in the Prisma database after discovering them from Shopify's well-known URLs. If these endpoints change or you encounter authentication issues:
-
-1. Clear the Prisma database to force a refetch of the endpoints:
-   ```bash
-   npx prisma migrate reset
-   ```
-
-2. Restart your development server
-
-The app will automatically rediscover and cache the updated endpoints on the next conversation.
-
 ## Contributing
 We appreciate your interest in contributing to this project. As this is an example repository intended for educational and reference purposes, we are not accepting contributions.

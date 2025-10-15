@@ -211,49 +211,49 @@ export async function getConversationHistory(conversationId) {
 }
 
 /**
- * Store customer account endpoints for a conversation
+ * Store customer account URLs for a conversation
  * @param {string} conversationId - The conversation ID
- * @param {string} mcpApi - The customer account MCP endpoint
- * @param {string} authorizationEndpoint - The customer account authorization endpoint
- * @param {string} tokenEndpoint - The customer account token endpoint
- * @returns {Promise<Object>} - The saved endpoints object
+ * @param {string} mcpApiUrl - The customer account MCP URL
+ * @param {string} authorizationUrl - The customer account authorization URL
+ * @param {string} tokenUrl - The customer account token URL
+ * @returns {Promise<Object>} - The saved urls object
  */
-export async function storeCustomerAccountEndpoints({conversationId, mcpApi, authorizationEndpoint, tokenEndpoint}) {
+export async function storeCustomerAccountUrls({conversationId, mcpApiUrl, authorizationUrl, tokenUrl}) {
   try {
-    return await prisma.customerAccountEndpoints.upsert({
+    return await prisma.customerAccountUrls.upsert({
       where: { conversationId },
       create: {
         conversationId,
-        mcpApi,
-        authorizationEndpoint,
-        tokenEndpoint,
+        mcpApiUrl,
+        authorizationUrl,
+        tokenUrl,
         updatedAt: new Date(),
       },
       update: {
-        mcpApi,
-        authorizationEndpoint,
-        tokenEndpoint,
+        mcpApiUrl,
+        authorizationUrl,
+        tokenUrl,
         updatedAt: new Date(),
       },
     });
   } catch (error) {
-    console.error('Error storing customer account endpoints:', error);
+    console.error('Error storing customer account URLs:', error);
     throw error;
   }
 }
 
 /**
- * Get customer account endpoints for a conversation
+ * Get customer account URLs for a conversation
  * @param {string} conversationId - The conversation ID
- * @returns {Promise<Object|null>} - The customer account endpoints or null if not found
+ * @returns {Promise<Object|null>} - The customer account URLs or null if not found
  */
-export async function getCustomerAccountEndpoints(conversationId) {
+export async function getCustomerAccountUrls(conversationId) {
   try {
-    return await prisma.customerAccountEndpoints.findUnique({
+    return await prisma.customerAccountUrls.findUnique({
       where: { conversationId }
     });
   } catch (error) {
-    console.error('Error retrieving customer account endpoints:', error);
+    console.error('Error retrieving customer account URLs:', error);
     return null;
   }
 }

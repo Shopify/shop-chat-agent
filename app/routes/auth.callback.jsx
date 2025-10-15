@@ -1,4 +1,4 @@
-import { getCodeVerifier, storeCustomerToken, getCustomerAccountEndpoints } from "../db.server";
+import { getCodeVerifier, storeCustomerToken, getCustomerAccountUrls } from "../db.server";
 
 /**
  * Handle OAuth callback from Shopify Customer API
@@ -162,7 +162,6 @@ async function exchangeCodeForToken(code, state) {
  * @returns {Promise<string|null>} - The token URL or null if not found
  */
 async function getTokenUrl(conversationId) {
-  const { tokenEndpoint } = await getCustomerAccountEndpoints(conversationId);
-
-  return tokenEndpoint;
+  const { tokenUrl } = await getCustomerAccountUrls(conversationId);
+  return tokenUrl;
 }

@@ -51,15 +51,15 @@ export async function generateAuthUrl(conversationId, shopId) {
 }
 
 /**
- * Get the base auth URL from the customer MCP endpoint
+ * Get the base auth URL from the customer MCP API URL
  * @param {string} conversationId - The conversation ID to track the auth flow
  * @returns {Promise<string|null>} - The base auth URL or null if not found
  */
 async function getBaseAuthUrl(conversationId) {
-  const { getCustomerAccountEndpoints } = await import('./db.server');
-  const { authorizationEndpoint } = await getCustomerAccountEndpoints(conversationId);
+  const { getCustomerAccountUrls } = await import('./db.server');
+  const { authorizationUrl } = await getCustomerAccountUrls(conversationId);
 
-  return authorizationEndpoint;
+  return authorizationUrl;
 }
 
 /**
