@@ -22,7 +22,7 @@ redirect_urls = [ "https://shop-chat-agent.com/api/auth" ]
 [pos]
 embedded = false
 
-[mcp.customer_authentication]
+[customer_authentication]
 redirect_uris = [
   "https://shop-chat-agent.com/callback"
 ]
