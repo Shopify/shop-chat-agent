@@ -1,6 +1,7 @@
 import { Firestore } from '@google-cloud/firestore';
 import { CustomerAccountUrls } from './domain/customerAccountUrls';
 import { Message } from './domain/message';
+import { CustomerToken } from './domain/customerToken';
 
 let firestore: Firestore;
 
@@ -82,7 +83,7 @@ export async function storeCustomerToken(
   conversationId: string,
   accessToken: string,
   expiresAt: string,
-) {
+): Promise<CustomerToken> {
   try {
     const tokensRef = firestore.collection('customerToken');
     const snapshot = await tokensRef
@@ -99,7 +100,7 @@ export async function storeCustomerToken(
         updatedAt: new Date(),
       };
       await doc.ref.update(dataToUpdate);
-      return { id: doc.id, ...doc.data(), ...dataToUpdate };
+      return { id: doc.id, ...doc.data(), ...dataToUpdate } as CustomerToken;
     }
 
     // Create a new token record
@@ -111,7 +112,7 @@ export async function storeCustomerToken(
       updatedAt: new Date(),
     };
     const docRef = await tokensRef.add(dataToCreate);
-    return { id: docRef.id, ...dataToCreate };
+    return { id: docRef.id, ...dataToCreate } as CustomerToken;
   } catch (error) {
     console.error('Error storing customer token:', error);
     throw error;
@@ -123,7 +124,7 @@ export async function storeCustomerToken(
  * @param {string} conversationId - The conversation ID
  * @returns {Promise<Object|null>} - The customer token or null if not found/expired
  */
-export async function getCustomerToken(conversationId: string): Promise<object|null> {
+export async function getCustomerToken(conversationId: string): Promise<CustomerToken|null> {
   try {
     const tokensRef = firestore.collection('customerToken');
     const snapshot = await tokensRef
@@ -139,7 +140,7 @@ export async function getCustomerToken(conversationId: string): Promise<object|n
     const doc = snapshot.docs[0];
     const token = { id: doc.id, ...doc.data() };
 
-    return token;
+    return token as CustomerToken;
   } catch (error) {
     console.error('Error retrieving customer token:', error);
     return null;
