@@ -1,34 +1,13 @@
 import { Firestore } from '@google-cloud/firestore';
 
-// export const firebaseConfig = {
-//   apiKey: process.env.FIREBASE_API_KEY,
-//   authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-//   projectId: process.env.FIREBASE_PROJECT_ID,
-//   storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-//   messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-//   appId: process.env.FIREBASE_APP_ID,
-// };
-
-// Create a new client
 export const firestore = new Firestore({
   projectId: 'esquad-shopify-chat-agent',
   keyFilename: './.gcp-sa-el-local.json',
 });
 
-
-try{
-  await firestore.collection("test").add({
-    foo: "bar"
-  });
-
-}
-catch (error) {
-  console.error(error);
-}
 // if (process.env.NODE_ENV !== "production") {
 
 // }
-
 
 /**
  * Store a code verifier for PKCE authentication
@@ -207,7 +186,7 @@ export async function createOrUpdateConversation(conversationId: string) {
  * @param {string} content - The message content
  * @returns {Promise<Object>} - The saved message
  */
-export async function saveMessage(conversationId, role, content) {
+export async function saveMessage(conversationId: string, role: string, content: string) {
   try {// Ensure the conversation exists
   await createOrUpdateConversation(conversationId);
 
@@ -231,7 +210,7 @@ export async function saveMessage(conversationId, role, content) {
  * @param {string} conversationId - The conversation ID
  * @returns {Promise<Array>} - Array of messages in the conversation
  */
-export async function getConversationHistory(conversationId) {
+export async function getConversationHistory(conversationId: string) {
   try {
     const messagesRef = firestore.collection("message");
     const snapshot = await messagesRef
@@ -256,36 +235,46 @@ export async function getConversationHistory(conversationId) {
  */
 export async function storeCustomerAccountUrls({conversationId, mcpApiUrl, authorizationUrl, tokenUrl}) {
 
-  firestore.collection("customerAccountUrls").doc(conversationId).set({
-    conversationId,
-    mcpApiUrl,
-    authorizationUrl,
-    tokenUrl,
-    updatedAt: new Date(),
-  });
+  // firestore.collection("customerAccountUrls").doc(conversationId).set({
+  //   conversationId,
+  //   mcpApiUrl,
+  //   authorizationUrl,
+  //   tokenUrl,
+  //   updatedAt: new Date(),
+  // });
 
 
-  // try {
-  //   return await firestore.customerAccountUrls.upsert({
-  //     where: { conversationId },
-  //     create: {
-  //       conversationId,
-  //       mcpApiUrl,
-  //       authorizationUrl,
-  //       tokenUrl,
-  //       updatedAt: new Date(),
-  //     },
-  //     update: {
-  //       mcpApiUrl,
-  //       authorizationUrl,
-  //       tokenUrl,
-  //       updatedAt: new Date(),
-  //     },
-  //   });
-  // } catch (error) {
-  //   console.error('Error storing customer account URLs:', error);
-  //   throw error;
-  // }
+  try {
+    const docRef = firestore.collection("customerAccountUrls").doc(conversationId);
+    const docSnap = await docRef.get();
+
+    if (docSnap.exists) {
+      // Document exists, update it
+      const dataToUpdate = {
+        mcpApiUrl,
+        authorizationUrl,
+        tokenUrl,
+        updatedAt: new Date(),
+      };
+      await docRef.update(dataToUpdate);
+      return { ...docSnap.data(), ...dataToUpdate };
+    } else {
+      // Document doesn't exist, create it
+      const dataToCreate = {
+        conversationId,
+        mcpApiUrl,
+        authorizationUrl,
+        tokenUrl,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await docRef.set(dataToCreate);
+      return dataToCreate;
+    }
+  } catch (error) {
+    console.error('Error storing customer account URLs:', error);
+    throw error;
+  }
 }
 
 /**
@@ -294,29 +283,17 @@ export async function storeCustomerAccountUrls({conversationId, mcpApiUrl, autho
  * @returns {Object|null} - The customer account URLs or null if not found
  */
 export async function getCustomerAccountUrls(conversationId: string) {
-  const docRef = firestore.collection("customerAccountUrls").doc(conversationId);
+  try {
+    const docRef = firestore.collection("customerAccountUrls").doc(conversationId);
+    const doc = await docRef.get();
 
-  const doc = await docRef.get();
-  console.log(`getCustomerAccountUrls 2 -> ${conversationId}`, doc);
-  if (!doc.exists) {
-    console.error('Error retrieving customer account URLs:');
+    if (!doc.exists) {
+      return null;
+    }
+
+    return doc.data();
+  } catch (error) {
+    console.error('Error retrieving customer account URLs:', error);
     return null;
   }
-
-  const customerAccountUrls = doc.data();
-  if (!customerAccountUrls) {
-    console.error('Error retrieving customer account URLs:');
-    return null;
-  }
-
-  return customerAccountUrls;
-
-  // try {
-  //   return await firestore.customerAccountUrls.findUnique({
-  //     where: { conversationId }
-  //   });
-  // } catch (error) {
-  //   console.error('Error retrieving customer account URLs:', error);
-  //   return null;
-  // }
 }
