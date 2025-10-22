@@ -4,8 +4,8 @@ let firestore: Firestore;
 
 if (process.env.NODE_ENV !== "production") {
 	firestore = new Firestore({
-		projectId: "esquad-shopify-chat-agent",
-		keyFilename: "./.gcp-sa-el-local.json",
+		projectId: process.env.GCP_PROJECT_ID,
+		keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 	});
 } else {
 	firestore = new Firestore();
@@ -83,34 +83,34 @@ export async function storeCustomerToken(
 	expiresAt: string,
 ) {
 	try {
-		// Check if a token already exists for this conversation
-		const existingToken = await firestore.customerToken.findFirst({
-			where: { conversationId },
-		});
+		const tokensRef = firestore.collection("customerToken");
+		const snapshot = await tokensRef
+			.where("conversationId", "==", conversationId)
+			.limit(1)
+			.get();
 
-		if (existingToken) {
+		if (!snapshot.empty) {
 			// Update existing token
-			return await firestore.customerToken.update({
-				where: { id: existingToken.id },
-				data: {
-					accessToken,
-					expiresAt,
-					updatedAt: new Date(),
-				},
-			});
+			const doc = snapshot.docs[0];
+			const dataToUpdate = {
+				accessToken,
+				expiresAt: new Date(expiresAt),
+				updatedAt: new Date(),
+			};
+			await doc.ref.update(dataToUpdate);
+			return { id: doc.id, ...doc.data(), ...dataToUpdate };
 		}
 
 		// Create a new token record
-		return await firestore.customerToken.create({
-			data: {
-				id: `ct_${Date.now()}`,
-				conversationId,
-				accessToken,
-				expiresAt,
-				createdAt: new Date(),
-				updatedAt: new Date(),
-			},
-		});
+		const dataToCreate = {
+			conversationId,
+			accessToken,
+			expiresAt: new Date(expiresAt),
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		const docRef = await tokensRef.add(dataToCreate);
+		return { id: docRef.id, ...dataToCreate };
 	} catch (error) {
 		console.error("Error storing customer token:", error);
 		throw error;
