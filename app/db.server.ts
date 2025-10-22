@@ -1,13 +1,17 @@
-import { Firestore } from '@google-cloud/firestore';
+import { Firestore } from "@google-cloud/firestore";
 
-export const firestore = new Firestore({
-  projectId: 'esquad-shopify-chat-agent',
-  keyFilename: './.gcp-sa-el-local.json',
-});
+let firestore: Firestore;
 
-// if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "production") {
+	firestore = new Firestore({
+		projectId: "esquad-shopify-chat-agent",
+		keyFilename: "./.gcp-sa-el-local.json",
+	});
+} else {
+	firestore = new Firestore();
+}
 
-// }
+export default firestore;
 
 /**
  * Store a code verifier for PKCE authentication
@@ -16,23 +20,23 @@ export const firestore = new Firestore({
  * @returns {Promise<Object>} - The saved code verifier object
  */
 export async function storeCodeVerifier(state, verifier) {
-  // Calculate expiration date (10 minutes from now)
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+	// Calculate expiration date (10 minutes from now)
+	const expiresAt = new Date();
+	expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-  try {
-    return await prisma.codeVerifier.create({
-      data: {
-        id: `cv_${Date.now()}`,
-        state,
-        verifier,
-        expiresAt
-      }
-    });
-  } catch (error) {
-    console.error('Error storing code verifier:', error);
-    throw error;
-  }
+	try {
+		const dataToStore = {
+			state,
+			verifier,
+			expiresAt,
+			createdAt: new Date(),
+		};
+		const docRef = await firestore.collection("codeVerifier").add(dataToStore);
+		return { id: docRef.id, ...dataToStore };
+	} catch (error) {
+		console.error("Error storing code verifier:", error);
+		throw error;
+	}
 }
 
 /**
@@ -41,32 +45,30 @@ export async function storeCodeVerifier(state, verifier) {
  * @returns {Promise<Object|null>} - The code verifier object or null if not found
  */
 export async function getCodeVerifier(state) {
-  try {
-    const verifier = await prisma.codeVerifier.findFirst({
-      where: {
-        state,
-        expiresAt: {
-          gt: new Date()
-        }
-      }
-    });
+	try {
+		const verifierRef = firestore.collection("codeVerifier");
+		const snapshot = await verifierRef
+			.where("state", "==", state)
+			.where("expiresAt", ">", new Date())
+			.limit(1)
+			.get();
 
-    if (verifier) {
-      // Delete it after retrieval to prevent reuse
-      await prisma.codeVerifier.delete({
-        where: {
-          id: verifier.id
-        }
-      });
-    }
+		if (snapshot.empty) {
+			return null;
+		}
 
-    return verifier;
-  } catch (error) {
-    console.error('Error retrieving code verifier:', error);
-    return null;
-  }
+		const doc = snapshot.docs[0];
+		const verifier = { id: doc.id, ...doc.data() };
+
+		// Delete it after retrieval to prevent reuse
+		await doc.ref.delete();
+
+		return verifier;
+	} catch (error) {
+		console.error("Error retrieving code verifier:", error);
+		return null;
+	}
 }
-
 
 /**
  * Store a customer access token in the database
@@ -75,40 +77,44 @@ export async function getCodeVerifier(state) {
  * @param {Date} expiresAt - When the token expires
  * @returns {Promise<Object>} - The saved customer token
  */
-export async function storeCustomerToken(conversationId: string, accessToken: string, expiresAt: string) {
-  try {
-    // Check if a token already exists for this conversation
-    const existingToken = await firestore.customerToken.findFirst({
-      where: { conversationId }
-    });
+export async function storeCustomerToken(
+	conversationId: string,
+	accessToken: string,
+	expiresAt: string,
+) {
+	try {
+		// Check if a token already exists for this conversation
+		const existingToken = await firestore.customerToken.findFirst({
+			where: { conversationId },
+		});
 
-    if (existingToken) {
-      // Update existing token
-      return await firestore.customerToken.update({
-        where: { id: existingToken.id },
-        data: {
-          accessToken,
-          expiresAt,
-          updatedAt: new Date()
-        }
-      });
-    }
+		if (existingToken) {
+			// Update existing token
+			return await firestore.customerToken.update({
+				where: { id: existingToken.id },
+				data: {
+					accessToken,
+					expiresAt,
+					updatedAt: new Date(),
+				},
+			});
+		}
 
-    // Create a new token record
-    return await firestore.customerToken.create({
-      data: {
-        id: `ct_${Date.now()}`,
-        conversationId,
-        accessToken,
-        expiresAt,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    });
-  } catch (error) {
-    console.error('Error storing customer token:', error);
-    throw error;
-  }
+		// Create a new token record
+		return await firestore.customerToken.create({
+			data: {
+				id: `ct_${Date.now()}`,
+				conversationId,
+				accessToken,
+				expiresAt,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			},
+		});
+	} catch (error) {
+		console.error("Error storing customer token:", error);
+		throw error;
+	}
 }
 
 /**
@@ -117,26 +123,26 @@ export async function storeCustomerToken(conversationId: string, accessToken: st
  * @returns {Promise<Object|null>} - The customer token or null if not found/expired
  */
 export async function getCustomerToken(conversationId) {
-  try {
-    const tokensRef = firestore.collection("customerToken");
-    const snapshot = await tokensRef
-      .where("conversationId", "==", conversationId)
-      .where("expiresAt", ">", new Date())
-      .limit(1)
-      .get();
+	try {
+		const tokensRef = firestore.collection("customerToken");
+		const snapshot = await tokensRef
+			.where("conversationId", "==", conversationId)
+			.where("expiresAt", ">", new Date())
+			.limit(1)
+			.get();
 
-    if (snapshot.empty) {
-      return null;
-    }
+		if (snapshot.empty) {
+			return null;
+		}
 
-    const doc = snapshot.docs[0];
-    const token = { id: doc.id, ...doc.data() };
+		const doc = snapshot.docs[0];
+		const token = { id: doc.id, ...doc.data() };
 
-    return token;
-  } catch (error) {
-    console.error('Error retrieving customer token:', error);
-    return null;
-  }
+		return token;
+	} catch (error) {
+		console.error("Error retrieving customer token:", error);
+		return null;
+	}
 }
 
 /**
@@ -145,38 +151,25 @@ export async function getCustomerToken(conversationId) {
  * @returns {Promise<Object>} - The created or updated conversation
  */
 export async function createOrUpdateConversation(conversationId: string) {
-  // const docRef = firestore.collection("conversation").doc(conversationId);
+	try {
+		const docRef = firestore.collection("conversation").doc(conversationId);
+		const docSnap = await docRef.get();
 
-  // if ((await docRef.get()).exists) {
-  //   return docRef.update({
-  //     updatedAt: new Date()
-  //   });
-  // }
+		if (docSnap.exists) {
+			return await docRef.update({
+				updatedAt: new Date(),
+			});
+		}
 
-  // return docRef.create({
-  //   id: conversationId
-  // });
-
-
-  try {
-  const docRef = firestore.collection("conversation").doc(conversationId);
-  const docSnap = await docRef.get();
-
-  if (docSnap.exists) {
-    return await docRef.update({
-      updatedAt: new Date(),
-    });
-  }
-
-  return await docRef.set({
-    id: conversationId,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-} catch (error) {
-  console.error('Error creating/updating conversation:', error);
-    throw error;
-  }
+		return await docRef.set({
+			id: conversationId,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		});
+	} catch (error) {
+		console.error("Error creating/updating conversation:", error);
+		throw error;
+	}
 }
 
 /**
@@ -186,23 +179,28 @@ export async function createOrUpdateConversation(conversationId: string) {
  * @param {string} content - The message content
  * @returns {Promise<Object>} - The saved message
  */
-export async function saveMessage(conversationId: string, role: string, content: string) {
-  try {// Ensure the conversation exists
-  await createOrUpdateConversation(conversationId);
+export async function saveMessage(
+	conversationId: string,
+	role: string,
+	content: string,
+) {
+	try {
+		// Ensure the conversation exists
+		await createOrUpdateConversation(conversationId);
 
-  // Create the message
-  const message = {
-    conversationId,
-    role,
-    content,
-    createdAt: new Date(),
-  };
-  const docRef = await firestore.collection("message").add(message);
-  return { id: docRef.id, ...message };
-} catch (error) {
-  console.error('Error saving message:', error);
-    throw error;
-  }
+		// Create the message
+		const message = {
+			conversationId,
+			role,
+			content,
+			createdAt: new Date(),
+		};
+		const docRef = await firestore.collection("message").add(message);
+		return { id: docRef.id, ...message };
+	} catch (error) {
+		console.error("Error saving message:", error);
+		throw error;
+	}
 }
 
 /**
@@ -211,18 +209,18 @@ export async function saveMessage(conversationId: string, role: string, content:
  * @returns {Promise<Array>} - Array of messages in the conversation
  */
 export async function getConversationHistory(conversationId: string) {
-  try {
-    const messagesRef = firestore.collection("message");
-    const snapshot = await messagesRef
-    .where("conversationId", "==", conversationId)
-    .orderBy("createdAt", "asc")
-    .get();
+	try {
+		const messagesRef = firestore.collection("message");
+		const snapshot = await messagesRef
+			.where("conversationId", "==", conversationId)
+			.orderBy("createdAt", "asc")
+			.get();
 
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-} catch (error) {
-  console.error('Error retrieving conversation history:', error);
-    return [];
-  }
+		return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+	} catch (error) {
+		console.error("Error retrieving conversation history:", error);
+		return [];
+	}
 }
 
 /**
@@ -233,48 +231,53 @@ export async function getConversationHistory(conversationId: string) {
  * @param {string} tokenUrl - The customer account token URL
  * @returns {Promise<Object>} - The saved urls object
  */
-export async function storeCustomerAccountUrls({conversationId, mcpApiUrl, authorizationUrl, tokenUrl}) {
+export async function storeCustomerAccountUrls({
+	conversationId,
+	mcpApiUrl,
+	authorizationUrl,
+	tokenUrl,
+}) {
+	// firestore.collection("customerAccountUrls").doc(conversationId).set({
+	//   conversationId,
+	//   mcpApiUrl,
+	//   authorizationUrl,
+	//   tokenUrl,
+	//   updatedAt: new Date(),
+	// });
 
-  // firestore.collection("customerAccountUrls").doc(conversationId).set({
-  //   conversationId,
-  //   mcpApiUrl,
-  //   authorizationUrl,
-  //   tokenUrl,
-  //   updatedAt: new Date(),
-  // });
+	try {
+		const docRef = firestore
+			.collection("customerAccountUrls")
+			.doc(conversationId);
+		const docSnap = await docRef.get();
 
-
-  try {
-    const docRef = firestore.collection("customerAccountUrls").doc(conversationId);
-    const docSnap = await docRef.get();
-
-    if (docSnap.exists) {
-      // Document exists, update it
-      const dataToUpdate = {
-        mcpApiUrl,
-        authorizationUrl,
-        tokenUrl,
-        updatedAt: new Date(),
-      };
-      await docRef.update(dataToUpdate);
-      return { ...docSnap.data(), ...dataToUpdate };
-    } else {
-      // Document doesn't exist, create it
-      const dataToCreate = {
-        conversationId,
-        mcpApiUrl,
-        authorizationUrl,
-        tokenUrl,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      await docRef.set(dataToCreate);
-      return dataToCreate;
-    }
-  } catch (error) {
-    console.error('Error storing customer account URLs:', error);
-    throw error;
-  }
+		if (docSnap.exists) {
+			// Document exists, update it
+			const dataToUpdate = {
+				mcpApiUrl,
+				authorizationUrl,
+				tokenUrl,
+				updatedAt: new Date(),
+			};
+			await docRef.update(dataToUpdate);
+			return { ...docSnap.data(), ...dataToUpdate };
+		} else {
+			// Document doesn't exist, create it
+			const dataToCreate = {
+				conversationId,
+				mcpApiUrl,
+				authorizationUrl,
+				tokenUrl,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			};
+			await docRef.set(dataToCreate);
+			return dataToCreate;
+		}
+	} catch (error) {
+		console.error("Error storing customer account URLs:", error);
+		throw error;
+	}
 }
 
 /**
@@ -283,17 +286,19 @@ export async function storeCustomerAccountUrls({conversationId, mcpApiUrl, autho
  * @returns {Object|null} - The customer account URLs or null if not found
  */
 export async function getCustomerAccountUrls(conversationId: string) {
-  try {
-    const docRef = firestore.collection("customerAccountUrls").doc(conversationId);
-    const doc = await docRef.get();
+	try {
+		const docRef = firestore
+			.collection("customerAccountUrls")
+			.doc(conversationId);
+		const doc = await docRef.get();
 
-    if (!doc.exists) {
-      return null;
-    }
+		if (!doc.exists) {
+			return null;
+		}
 
-    return doc.data();
-  } catch (error) {
-    console.error('Error retrieving customer account URLs:', error);
-    return null;
-  }
+		return doc.data();
+	} catch (error) {
+		console.error("Error retrieving customer account URLs:", error);
+		return null;
+	}
 }
