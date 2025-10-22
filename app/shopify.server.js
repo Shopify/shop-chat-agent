@@ -4,11 +4,8 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
-//import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-//import prisma from "./db.server";
-import { firestore } from "./db.server";
-//import { FirestoreSessionStorage } from "@izumisy/shopify-app-session-storage-firestore";
-import { FirestoreSessionStorage } from "./services/shopify.sessionStorage";
+import firestore from "./db.server";
+import { FirestoreSessionStorage } from "./services/shopifySessionStorage";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
