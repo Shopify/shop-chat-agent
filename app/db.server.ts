@@ -1,4 +1,6 @@
 import { Firestore } from '@google-cloud/firestore';
+import { CustomerAccountUrls } from './domain/customerAccountUrls';
+import { Message } from './domain/message';
 
 let firestore: Firestore;
 
@@ -19,7 +21,7 @@ export default firestore;
  * @param {string} verifier - The code verifier to store
  * @returns {Promise<Object>} - The saved code verifier object
  */
-export async function storeCodeVerifier(state, verifier) {
+export async function storeCodeVerifier(state: string, verifier: string) {
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
@@ -43,7 +45,7 @@ export async function storeCodeVerifier(state, verifier) {
  * @param {string} state - The state parameter used in OAuth flow
  * @returns {Promise<Object|null>} - The code verifier object or null if not found
  */
-export async function getCodeVerifier(state) {
+export async function getCodeVerifier(state: string) {
   try {
     const verifierRef = firestore.collection('codeVerifier');
     const snapshot = await verifierRef
@@ -121,7 +123,7 @@ export async function storeCustomerToken(
  * @param {string} conversationId - The conversation ID
  * @returns {Promise<Object|null>} - The customer token or null if not found/expired
  */
-export async function getCustomerToken(conversationId) {
+export async function getCustomerToken(conversationId: string): Promise<object|null> {
   try {
     const tokensRef = firestore.collection('customerToken');
     const snapshot = await tokensRef
@@ -149,7 +151,7 @@ export async function getCustomerToken(conversationId) {
  * @param {string} conversationId - The conversation ID
  * @returns {Promise<Object>} - The created or updated conversation
  */
-export async function createOrUpdateConversation(conversationId: string) {
+export async function createOrUpdateConversation(conversationId: string): Promise<object> {
   try {
     const docRef = firestore.collection('conversation').doc(conversationId);
     const docSnap = await docRef.get();
@@ -176,13 +178,13 @@ export async function createOrUpdateConversation(conversationId: string) {
  * @param {string} conversationId - The conversation ID
  * @param {string} role - The message role (user or assistant)
  * @param {string} content - The message content
- * @returns {Promise<Object>} - The saved message
+ * @returns {Promise<Message>} - The saved message
  */
 export async function saveMessage(
   conversationId: string,
   role: string,
   content: string,
-) {
+): Promise<Message> {
   try {
     // Ensure the conversation exists
     await createOrUpdateConversation(conversationId);
@@ -195,7 +197,7 @@ export async function saveMessage(
       createdAt: new Date(),
     };
     const docRef = await firestore.collection('conversation').doc(conversationId).collection('messages').add(message);
-    return { id: docRef.id, ...message };
+    return { id: docRef.id, ...message } as Message;
   } catch (error) {
     console.error('Error saving message:', error);
     throw error;
@@ -205,17 +207,16 @@ export async function saveMessage(
 /**
  * Get conversation history
  * @param {string} conversationId - The conversation ID
- * @returns {Promise<Array>} - Array of messages in the conversation
+ * @returns {Promise<Message>} - Array of messages in the conversation
  */
-export async function getConversationHistory(conversationId: string) {
+export async function getConversationHistory(conversationId: string): Promise<Message[]> {
   try {
-    const messagesRef = firestore.collection('message');
+    const messagesRef = firestore.collection('conversation').doc(conversationId).collection('messages');
     const snapshot = await messagesRef
-      .where('conversationId', '==', conversationId)
       .orderBy('createdAt', 'asc')
       .get();
 
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Message[];
   } catch (error) {
     console.error('Error retrieving conversation history:', error);
     return [];
@@ -235,15 +236,7 @@ export async function storeCustomerAccountUrls({
   mcpApiUrl,
   authorizationUrl,
   tokenUrl,
-}) {
-  // firestore.collection("customerAccountUrls").doc(conversationId).set({
-  //   conversationId,
-  //   mcpApiUrl,
-  //   authorizationUrl,
-  //   tokenUrl,
-  //   updatedAt: new Date(),
-  // });
-
+}): Promise<object> {
   try {
     const docRef = firestore
       .collection('customerAccountUrls')
@@ -282,9 +275,9 @@ export async function storeCustomerAccountUrls({
 /**
  * Get customer account URLs for a conversation
  * @param {string} conversationId - The conversation ID
- * @returns {Object|null} - The customer account URLs or null if not found
+ * @returns {CustomerAccountUrls|null} - The customer account URLs or null if not found
  */
-export async function getCustomerAccountUrls(conversationId: string) {
+export async function getCustomerAccountUrls(conversationId: string): Promise<CustomerAccountUrls|null> {
   try {
     const docRef = firestore
       .collection('customerAccountUrls')
@@ -295,7 +288,9 @@ export async function getCustomerAccountUrls(conversationId: string) {
       return null;
     }
 
-    return doc.data();
+    const data = doc.data();
+
+    return data as CustomerAccountUrls;
   } catch (error) {
     console.error('Error retrieving customer account URLs:', error);
     return null;
