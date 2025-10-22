@@ -194,7 +194,7 @@ export async function saveMessage(
       content,
       createdAt: new Date(),
     };
-    const docRef = await firestore.collection('message').add(message);
+    const docRef = await firestore.collection('conversation').doc(conversationId).collection('messages').add(message);
     return { id: docRef.id, ...message };
   } catch (error) {
     console.error('Error saving message:', error);
