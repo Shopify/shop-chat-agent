@@ -1,0 +1,23 @@
+{
+  "lsp": {
+    "biome": {
+      "settings": {
+        "config_path": "biome.json"
+      },
+      "binary": {
+        "path": "node_modules/.bin/biome",
+        "arguments": ["lsp-proxy"]
+      }
+    }
+  },
+  "languages": {
+    "TypeScript": {
+      "formatter": { "language_server": { "name": "biome" } },
+      "code_actions_on_format": {
+        "source.fixAll.biome": true,
+        "source.organizeImports.biome": true
+      }
+    }
+  },
+  "format_on_save": "on"
+}
