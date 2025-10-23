@@ -8,14 +8,13 @@ import type {
 } from "@google-cloud/firestore";
 import { Session, type SessionParams } from "@shopify/shopify-api";
 import type { SessionStorage } from "@shopify/shopify-app-session-storage";
-import type { shopifySession } from "app/domain/shopifySession";
 
 type SessionDocument = {
 	shopID: string;
 	value: SessionParams;
 };
 
-export class FirestoreSessionStorage implements SessionStorage {
+export class FirestoreSessionStorageRepository implements SessionStorage {
 	private firestore: Firestore;
 	private collection: CollectionReference<SessionDocument>;
 	private converter: FirestoreDataConverter<SessionDocument>;
@@ -52,7 +51,7 @@ export class FirestoreSessionStorage implements SessionStorage {
 		}
 	}
 
-	async loadSession(id: string): Promise<shopifySession | undefined> {
+	async loadSession(id: string): Promise<Session | undefined> {
 		const snapshot = await this.collection.doc(id).get();
 		if (snapshot.exists) {
 			const data = snapshot.data();
@@ -85,7 +84,7 @@ export class FirestoreSessionStorage implements SessionStorage {
 		}
 	}
 
-	async findSessionsByShop(shop: string): Promise<shopifySession[]> {
+	async findSessionsByShop(shop: string): Promise<Session[]> {
 		const snapshots = await this.collection.where("shopID", "==", shop).get();
 		return snapshots.docs.map((snapshot) => {
 			const data = snapshot.data();
