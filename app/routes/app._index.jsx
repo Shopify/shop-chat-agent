@@ -1,54 +1,75 @@
+import { useLoaderData } from "react-router";
+import { authenticate } from "../shopify.server";
+import { chatService } from "../config";
+
+export async function loader({ request }) {
+  const { session } = await authenticate.admin(request);
+  const chatConversations = await chatService.getShopConversationHistory(
+    session.shop,
+  );
+
+  return { chatConversations };
+}
+
 export default function Index() {
+  /** @type {{ chatConversations: import("../domain/message").Conversation[] }} */
+  const { chatConversations } = useLoaderData();
   return (
-    <s-page>
+    <s-page heading="Esquad">
       <ui-title-bar title="Shop chat agent reference app" />
-
       <s-section>
-        <s-stack gap="base">
-          <s-heading>Congrats on creating a new Shopify app 🎉</s-heading>
-          <s-paragraph>
-            This is a reference app that adds a chat agent on your storefront,
-            which is powered via claude and can connect shopify mcp platform.
-          </s-paragraph>
-        </s-stack>
-      </s-section>
-
-      <s-section heading="App template specs" slot="aside">
-        <s-paragraph>
-          <s-text>Framework: </s-text>
-          <s-link href="https://reactrouter.com/" target="_blank">
-            React Router
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Interface: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/app-home/using-polaris-components"
-            target="_blank"
-          >
-            Polaris web components
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>API: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            GraphQL
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Database: </s-text>
-          <s-link href="https://www.prisma.io/" target="_blank">
-            Prisma
-          </s-link>
-        </s-paragraph>
-      </s-section>
-
-      <s-section heading="Next steps" slot="aside">
-        <s-text>Enable the theme extension in your theme editor.</s-text>
+        <s-heading>eSquad Chat agent</s-heading>
+        {chatConversations.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <ConversationsTable conversations={chatConversations} />
+        )}
       </s-section>
     </s-page>
   );
 }
+
+/**
+ * @param {{ conversations: import("../domain/message").Conversation[] }} props
+ */
+const ConversationsTable = ({ conversations }) => (
+  <s-section>
+    <s-table>
+      <s-table-header-row>
+        <s-table-header listSlot="primary">Id</s-table-header>
+        <s-table-header listSlot="primary">Created</s-table-header>
+        <s-table-header listSlot="primary">Updated</s-table-header>
+        <s-table-header listSlot="primary">View</s-table-header>
+      </s-table-header-row>
+      <s-table-body>
+        {conversations.map((conversation) => (
+          <ConversationRow key={conversation.id} conversation={conversation} />
+        ))}
+      </s-table-body>
+    </s-table>
+  </s-section>
+);
+
+/**
+ * @param {{ conversation: import("../domain/message").Conversation }} props
+ */
+const ConversationRow = ({ conversation }) => {
+  const createdAtDate = conversation.createdAt.toLocaleString();
+  const updatedAtDate = conversation.updatedAt.toLocaleString();
+  return (
+    <s-table-row>
+      <s-table-cell>{conversation.id}</s-table-cell>
+      <s-table-cell>{createdAtDate}</s-table-cell>
+      <s-table-cell>{updatedAtDate}</s-table-cell>
+      <s-table-cell>
+        <s-button>View</s-button>
+      </s-table-cell>
+    </s-table-row>
+  );
+};
+
+const EmptyState = () => (
+  <s-section accessibilityLabel="Empty state section">
+    <s-heading>No conversation</s-heading>
+  </s-section>
+);

@@ -481,7 +481,7 @@
             prompt_type: promptType
           });
 
-          const streamUrl = 'https://localhost:3458/chat';
+          const streamUrl = 'http://localhost:3000/chat';
           const shopId = window.shopId;
 
           const response = await fetch(streamUrl, {
