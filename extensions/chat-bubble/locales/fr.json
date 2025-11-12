@@ -1,6 +1,6 @@
 {
   "chat": {
-    "title": "Assistant de Magasin",
+    "title": "Assistant de magasin",
     "inputPlaceholder": "Écrivez votre message ici...",
     "sendButton": "Envoyer",
     "closeButton": "Fermer",
