@@ -1,6 +1,4 @@
-import { redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
-import { login } from "../../shopify.server";
+import { redirect } from "react-router";
 import styles from "./styles.module.css";
 
 export const loader = async ({ request }) => {
@@ -10,12 +8,10 @@ export const loader = async ({ request }) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  return null
 };
 
 export default function App() {
-  const { showForm } = useLoaderData();
-
   return (
     <div className={styles.index}>
       <div className={styles.content}>

@@ -34,7 +34,7 @@ export async function generateAuthUrl(conversationId, shopId) {
 
   // Set code_challenge and code_challenge_method parameters
   const codeChallengeMethod = "S256";
-  const baseAuthUrl = await getBaseAuthUrl(conversationId, shopId);
+  const baseAuthUrl = await getBaseAuthUrl(conversationId);
 
   if (!baseAuthUrl) {
     throw new Error('Base auth URL not found');
@@ -51,31 +51,15 @@ export async function generateAuthUrl(conversationId, shopId) {
 }
 
 /**
- * Get the base auth URL from the customer MCP endpoint
+ * Get the base auth URL from the customer MCP API URL
  * @param {string} conversationId - The conversation ID to track the auth flow
- * @param {string} shopId - The shop ID to track the auth flow
  * @returns {Promise<string|null>} - The base auth URL or null if not found
  */
-async function getBaseAuthUrl(conversationId, shopId) {
-  const { getCustomerAccountUrl } = await import('./db.server');
-  const customerAccountUrl = await getCustomerAccountUrl(conversationId);
+async function getBaseAuthUrl(conversationId) {
+  const { getCustomerAccountUrls } = await import('./db.server');
+  const { authorizationUrl } = await getCustomerAccountUrls(conversationId);
 
-  if (!customerAccountUrl) {
-    console.error('Customer account URL not found for conversation:', conversationId);
-    return null;
-  }
-
-  const endpoint = `${customerAccountUrl}/.well-known/oauth-authorization-server`;
-  const response = await fetch(endpoint);
-
-  if (!response.ok) {
-    console.error('Failed to fetch base auth URL from:', endpoint, response.status);
-
-    return null;
-  }
-
-  const data = await response.json();
-  return data.authorization_endpoint;
+  return authorizationUrl;
 }
 
 /**
