@@ -3,6 +3,7 @@
     "title": "Store Assistant",
     "inputPlaceholder": "Type your message here...",
     "sendButton": "Send",
-    "closeButton": "Close"
+    "closeButton": "Close",
+    "welcomeMessage": "Hi there! How can I help you today?"
   }
 }

@@ -1,0 +1,9 @@
+{
+  "chat": {
+    "title": "Assistant de Magasin",
+    "inputPlaceholder": "Écrivez votre message ici...",
+    "sendButton": "Envoyer",
+    "closeButton": "Fermer",
+    "welcomeMessage": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"
+  }
+}

@@ -34,7 +34,7 @@
 <script>
   window.shopChatConfig = {
     promptType: {{ block.settings.system_prompt | json }},
-    welcomeMessage: {{ block.settings.welcome_message | json }}
+    welcomeMessage: "{{ 'chat.welcomeMessage' | t }}";
   };
   window.shopId = {{ shop.id }};
 </script>
@@ -49,12 +49,6 @@
       "id": "chat_bubble_color",
       "label": "Chat Bubble Color",
       "default": "#5046e4"
-    },
-    {
-      "type": "text",
-      "id": "welcome_message",
-      "label": "Welcome Message",
-      "default": "👋 Hi there! How can I help you today?"
     },
     {
       "type": "select",
