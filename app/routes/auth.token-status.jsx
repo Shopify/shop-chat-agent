@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { getCustomerToken } from "../db.server";
 
 /**
@@ -9,12 +8,12 @@ export async function loader({ request }) {
   // Get conversation ID from query parameter
   const url = new URL(request.url);
   const conversationId = url.searchParams.get("conversation_id");
-  
+
   if (!conversationId) {
-    return json({ 
-      status: "error", 
-      message: "Missing conversation_id parameter" 
-    }, { 
+    return new Response(JSON.stringify({
+      status: "error",
+      message: "Missing conversation_id parameter"
+    }), {
       status: 400,
       headers: corsHeaders(request)
     });
@@ -23,29 +22,29 @@ export async function loader({ request }) {
   try {
     // Check if a token exists for this conversation ID
     const token = await getCustomerToken(conversationId);
-    
+
     if (token) {
       // Token exists and is valid
-      return json({
+      return new Response(JSON.stringify({
         status: "authorized",
         expires_at: token.expiresAt.toISOString()
-      }, {
+      }), {
         headers: corsHeaders(request)
       });
     } else {
       // No token found or token expired
-      return json({
+      return new Response(JSON.stringify({
         status: "unauthorized"
-      }, {
+      }), {
         headers: corsHeaders(request)
       });
     }
   } catch (error) {
     console.error("Error checking token status:", error);
-    return json({ 
-      status: "error", 
-      message: "Failed to check token status" 
-    }, { 
+    return new Response(JSON.stringify({
+      status: "error",
+      message: "Failed to check token status"
+    }), {
       status: 500,
       headers: corsHeaders(request)
     });
@@ -57,7 +56,7 @@ export async function loader({ request }) {
  */
 function corsHeaders(request) {
   const origin = request.headers.get("Origin") || "*";
-  
+
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -74,6 +73,6 @@ export const action = async ({ request }) => {
       headers: corsHeaders(request)
     });
   }
-  
-  return json({ error: "Method not allowed" }, { status: 405 });
+
+  return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
 };
