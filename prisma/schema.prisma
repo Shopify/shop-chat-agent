@@ -80,3 +80,33 @@ model CustomerAccountUrls {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
+
+// 聊天用户表 - 用于用户自助注册和登录
+model ChatUser {
+  id            String          @id @default(cuid())
+  shopId        String                          // 所属商店ID
+  username      String                          // 用户名
+  passwordHash  String                          // 密码哈希
+  currentPrompt String?                         // 当前使用的提示词
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  promptHistory PromptHistory[]                 // 提示词历史记录
+
+  @@unique([shopId, username])                  // 同一商店用户名唯一
+  @@index([shopId])
+}
+
+// 提示词历史表 - 保存每次修改的历史版本
+model PromptHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      ChatUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String                              // 提示词内容
+  version   Int                                 // 版本号
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, version])
+}

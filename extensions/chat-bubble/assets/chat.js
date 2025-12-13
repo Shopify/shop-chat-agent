@@ -33,7 +33,9 @@
           closeButton: container.querySelector('.shop-ai-chat-close'),
           chatInput: container.querySelector('.shop-ai-chat-input input'),
           sendButton: container.querySelector('.shop-ai-chat-send'),
-          messagesContainer: container.querySelector('.shop-ai-chat-messages')
+          messagesContainer: container.querySelector('.shop-ai-chat-messages'),
+          userButton: container.querySelector('.shop-ai-user-btn'),
+          settingsButton: container.querySelector('.shop-ai-settings-btn')
         };
 
         // Detect mobile device
@@ -52,13 +54,32 @@
        * Set up all event listeners for UI interactions
        */
       setupEventListeners: function() {
-        const { chatBubble, closeButton, chatInput, sendButton, messagesContainer } = this.elements;
+        const { chatBubble, closeButton, chatInput, sendButton, messagesContainer, userButton, settingsButton } = this.elements;
 
         // Toggle chat window visibility
         chatBubble.addEventListener('click', () => this.toggleChatWindow());
 
         // Close chat window
         closeButton.addEventListener('click', () => this.closeChatWindow());
+
+        // User button - login/logout
+        if (userButton) {
+          userButton.addEventListener('click', () => {
+            if (ShopAIChat.User.isLoggedIn()) {
+              // Show user menu
+              this.showUserMenu();
+            } else {
+              ShopAIChat.User.showAuthModal('login');
+            }
+          });
+        }
+
+        // Settings button
+        if (settingsButton) {
+          settingsButton.addEventListener('click', () => {
+            ShopAIChat.Settings.showPanel();
+          });
+        }
 
         // Send message when pressing Enter in input
         chatInput.addEventListener('keypress', (e) => {
@@ -182,6 +203,78 @@
         if (typingIndicator) {
           typingIndicator.remove();
         }
+      },
+
+      /**
+       * Update user button appearance based on login state
+       */
+      updateUserButton: function() {
+        const { userButton } = this.elements;
+        if (!userButton) return;
+
+        if (ShopAIChat.User.isLoggedIn()) {
+          userButton.classList.add('logged-in');
+          userButton.title = ShopAIChat.User.username;
+        } else {
+          userButton.classList.remove('logged-in');
+          userButton.title = '登录';
+        }
+      },
+
+      /**
+       * Show user menu (for logged in users)
+       */
+      showUserMenu: function() {
+        // Remove existing menu if any
+        const existingMenu = document.querySelector('.shop-ai-user-menu');
+        if (existingMenu) {
+          existingMenu.remove();
+          return;
+        }
+
+        const { userButton } = this.elements;
+        const rect = userButton.getBoundingClientRect();
+
+        const menu = document.createElement('div');
+        menu.classList.add('shop-ai-user-menu');
+        menu.innerHTML = `
+          <div class="shop-ai-user-info">
+            <span class="shop-ai-user-name">${ShopAIChat.User.username}</span>
+          </div>
+          <div class="shop-ai-user-menu-item" data-action="settings">提示词设置</div>
+          <div class="shop-ai-user-menu-item" data-action="logout">退出登录</div>
+        `;
+
+        menu.style.position = 'fixed';
+        menu.style.top = (rect.bottom + 5) + 'px';
+        menu.style.right = (window.innerWidth - rect.right) + 'px';
+
+        document.body.appendChild(menu);
+
+        // Event handlers
+        menu.querySelectorAll('.shop-ai-user-menu-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const action = item.dataset.action;
+            if (action === 'settings') {
+              ShopAIChat.Settings.showPanel();
+            } else if (action === 'logout') {
+              ShopAIChat.User.logout();
+              const messagesContainer = ShopAIChat.UI.elements.messagesContainer;
+              ShopAIChat.Message.add('您已退出登录', 'assistant', messagesContainer);
+            }
+            menu.remove();
+          });
+        });
+
+        // Close menu when clicking outside
+        setTimeout(() => {
+          document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target) && e.target !== userButton) {
+              menu.remove();
+              document.removeEventListener('click', closeMenu);
+            }
+          });
+        }, 0);
       },
 
       /**
@@ -465,6 +558,21 @@
      */
     API: {
       /**
+       * Get base URL for API requests.
+       * Prefer a configurable value from shopChatConfig, otherwise fall back to localhost.
+       * Trailing slashes are removed to simplify path concatenation.
+       * @returns {string}
+       */
+      getApiBaseUrl: function() {
+        const configuredBaseUrl = window.shopChatConfig?.apiBaseUrl;
+        const baseUrl = configuredBaseUrl && configuredBaseUrl.trim().length > 0
+          ? configuredBaseUrl.trim()
+          : 'https://localhost:3458';
+
+        // Remove trailing slash if present
+        return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      },
+      /**
        * Stream a response from the API
        * @param {string} userMessage - User's message text
        * @param {string} conversationId - Conversation ID for context
@@ -475,13 +583,26 @@
 
         try {
           const promptType = window.shopChatConfig?.promptType || "standardAssistant";
-          const requestBody = JSON.stringify({
+          const customSystemPrompt = window.shopChatConfig?.customSystemPrompt || "";
+          
+          // 构建请求体，如果用户已登录则包含 user_id
+          const requestData = {
             message: userMessage,
             conversation_id: conversationId,
-            prompt_type: promptType
-          });
+            prompt_type: promptType,
+            system_prompt_override: customSystemPrompt && customSystemPrompt.trim() !== ''
+              ? customSystemPrompt
+              : undefined
+          };
 
-          const streamUrl = 'https://localhost:3458/chat';
+          // 如果用户已登录，添加 user_id（让后端加载用户专属提示词）
+          if (ShopAIChat.User.isLoggedIn()) {
+            requestData.user_id = ShopAIChat.User.userId;
+          }
+
+          const requestBody = JSON.stringify(requestData);
+
+          const streamUrl = this.getApiBaseUrl() + '/chat';
           const shopId = window.shopId;
 
           const response = await fetch(streamUrl, {
@@ -630,7 +751,8 @@
           messagesContainer.appendChild(loadingMessage);
 
           // Fetch history from the server
-          const historyUrl = `https://localhost:3458/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`;
+          const historyUrl = this.getApiBaseUrl() +
+            `/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`;
           console.log('Fetching history from:', historyUrl);
 
           const response = await fetch(historyUrl, {
@@ -779,8 +901,8 @@
           attemptCount++;
 
           try {
-            const tokenUrl = 'https://localhost:3458/auth/token-status?conversation_id=' +
-              encodeURIComponent(conversationId);
+            const tokenUrl = ShopAIChat.API.getApiBaseUrl() +
+              '/auth/token-status?conversation_id=' + encodeURIComponent(conversationId);
             const response = await fetch(tokenUrl);
 
             if (!response.ok) {
@@ -816,6 +938,448 @@
         };
 
         setTimeout(poll, 2000);
+      }
+    },
+
+    /**
+     * User authentication functionality
+     * 用户认证模块
+     */
+    User: {
+      userId: null,
+      username: null,
+      token: null,
+      currentPrompt: null,
+
+      /**
+       * Initialize user state from localStorage
+       */
+      init: function() {
+        this.userId = localStorage.getItem('shopChatUserId');
+        this.username = localStorage.getItem('shopChatUsername');
+        this.token = localStorage.getItem('shopChatToken');
+        this.currentPrompt = localStorage.getItem('shopChatCurrentPrompt');
+      },
+
+      /**
+       * Check if user is logged in
+       */
+      isLoggedIn: function() {
+        return !!(this.userId && this.token);
+      },
+
+      /**
+       * Get authorization header
+       */
+      getAuthHeader: function() {
+        return this.token ? { 'Authorization': 'Bearer ' + this.token } : {};
+      },
+
+      /**
+       * Register a new user
+       */
+      register: async function(username, password) {
+        const shopId = window.shopId;
+        const apiBaseUrl = ShopAIChat.API.getApiBaseUrl();
+
+        const response = await fetch(apiBaseUrl + '/api/chat-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'register',
+            username,
+            password,
+            shopId: String(shopId)
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '注册失败');
+        }
+
+        this.saveUserData(data);
+        return data;
+      },
+
+      /**
+       * Login an existing user
+       */
+      login: async function(username, password) {
+        const shopId = window.shopId;
+        const apiBaseUrl = ShopAIChat.API.getApiBaseUrl();
+
+        const response = await fetch(apiBaseUrl + '/api/chat-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'login',
+            username,
+            password,
+            shopId: String(shopId)
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '登录失败');
+        }
+
+        this.saveUserData(data);
+        return data;
+      },
+
+      /**
+       * Save user data to localStorage
+       */
+      saveUserData: function(data) {
+        this.userId = data.userId;
+        this.username = data.username;
+        this.token = data.token;
+        this.currentPrompt = data.currentPrompt || null;
+
+        localStorage.setItem('shopChatUserId', data.userId);
+        localStorage.setItem('shopChatUsername', data.username);
+        localStorage.setItem('shopChatToken', data.token);
+        if (data.currentPrompt) {
+          localStorage.setItem('shopChatCurrentPrompt', data.currentPrompt);
+        }
+      },
+
+      /**
+       * Logout the current user
+       */
+      logout: function() {
+        this.userId = null;
+        this.username = null;
+        this.token = null;
+        this.currentPrompt = null;
+
+        localStorage.removeItem('shopChatUserId');
+        localStorage.removeItem('shopChatUsername');
+        localStorage.removeItem('shopChatToken');
+        localStorage.removeItem('shopChatCurrentPrompt');
+
+        // Update UI
+        ShopAIChat.UI.updateUserButton();
+      },
+
+      /**
+       * Show login/register modal
+       */
+      showAuthModal: function(mode = 'login') {
+        // Remove existing modal if any
+        const existingModal = document.querySelector('.shop-ai-auth-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.classList.add('shop-ai-auth-modal');
+        modal.innerHTML = `
+          <div class="shop-ai-auth-content">
+            <div class="shop-ai-auth-header">
+              <h3>${mode === 'login' ? '登录' : '注册'}</h3>
+              <button class="shop-ai-auth-close">&times;</button>
+            </div>
+            <form class="shop-ai-auth-form">
+              <div class="shop-ai-auth-field">
+                <label>用户名</label>
+                <input type="text" name="username" required minlength="2" maxlength="50" placeholder="请输入用户名">
+              </div>
+              <div class="shop-ai-auth-field">
+                <label>密码</label>
+                <input type="password" name="password" required minlength="4" placeholder="请输入密码">
+              </div>
+              <div class="shop-ai-auth-error" style="display: none;"></div>
+              <button type="submit" class="shop-ai-auth-submit">
+                ${mode === 'login' ? '登录' : '注册'}
+              </button>
+            </form>
+            <div class="shop-ai-auth-switch">
+              ${mode === 'login' 
+                ? '还没有账户？<a href="#" data-mode="register">立即注册</a>' 
+                : '已有账户？<a href="#" data-mode="login">立即登录</a>'}
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event handlers
+        const closeBtn = modal.querySelector('.shop-ai-auth-close');
+        const form = modal.querySelector('.shop-ai-auth-form');
+        const switchLink = modal.querySelector('.shop-ai-auth-switch a');
+        const errorDiv = modal.querySelector('.shop-ai-auth-error');
+
+        closeBtn.addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.remove();
+        });
+
+        switchLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          modal.remove();
+          this.showAuthModal(e.target.dataset.mode);
+        });
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const username = form.username.value.trim();
+          const password = form.password.value;
+
+          try {
+            errorDiv.style.display = 'none';
+            const submitBtn = form.querySelector('.shop-ai-auth-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '处理中...';
+
+            if (mode === 'login') {
+              await this.login(username, password);
+            } else {
+              await this.register(username, password);
+            }
+
+            modal.remove();
+            ShopAIChat.UI.updateUserButton();
+            
+            // Show success message
+            const messagesContainer = ShopAIChat.UI.elements.messagesContainer;
+            ShopAIChat.Message.add(`${mode === 'login' ? '登录' : '注册'}成功！欢迎 ${this.username}`, 'assistant', messagesContainer);
+          } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+            const submitBtn = form.querySelector('.shop-ai-auth-submit');
+            submitBtn.disabled = false;
+            submitBtn.textContent = mode === 'login' ? '登录' : '注册';
+          }
+        });
+      }
+    },
+
+    /**
+     * Settings panel functionality
+     * 设置面板模块
+     */
+    Settings: {
+      /**
+       * Show settings panel
+       */
+      showPanel: function() {
+        if (!ShopAIChat.User.isLoggedIn()) {
+          ShopAIChat.User.showAuthModal('login');
+          return;
+        }
+
+        // Remove existing panel if any
+        const existingPanel = document.querySelector('.shop-ai-settings-panel');
+        if (existingPanel) existingPanel.remove();
+
+        const panel = document.createElement('div');
+        panel.classList.add('shop-ai-settings-panel');
+        panel.innerHTML = `
+          <div class="shop-ai-settings-content">
+            <div class="shop-ai-settings-header">
+              <h3>提示词设置</h3>
+              <button class="shop-ai-settings-close">&times;</button>
+            </div>
+            <div class="shop-ai-settings-body">
+              <div class="shop-ai-settings-tabs">
+                <button class="shop-ai-tab active" data-tab="editor">编辑提示词</button>
+                <button class="shop-ai-tab" data-tab="history">历史版本</button>
+              </div>
+              <div class="shop-ai-tab-content active" data-tab="editor">
+                <textarea class="shop-ai-prompt-editor" placeholder="输入您的自定义提示词...">${ShopAIChat.User.currentPrompt || ''}</textarea>
+                <div class="shop-ai-settings-actions">
+                  <button class="shop-ai-save-prompt">保存提示词</button>
+                </div>
+              </div>
+              <div class="shop-ai-tab-content" data-tab="history">
+                <div class="shop-ai-history-list">
+                  <div class="shop-ai-loading">加载中...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(panel);
+
+        // Event handlers
+        const closeBtn = panel.querySelector('.shop-ai-settings-close');
+        const tabs = panel.querySelectorAll('.shop-ai-tab');
+        const saveBtn = panel.querySelector('.shop-ai-save-prompt');
+        const editor = panel.querySelector('.shop-ai-prompt-editor');
+
+        closeBtn.addEventListener('click', () => panel.remove());
+        panel.addEventListener('click', (e) => {
+          if (e.target === panel) panel.remove();
+        });
+
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            panel.querySelectorAll('.shop-ai-tab-content').forEach(content => {
+              content.classList.remove('active');
+              if (content.dataset.tab === tab.dataset.tab) {
+                content.classList.add('active');
+              }
+            });
+
+            if (tab.dataset.tab === 'history') {
+              this.loadHistory(panel);
+            }
+          });
+        });
+
+        saveBtn.addEventListener('click', async () => {
+          const prompt = editor.value.trim();
+          try {
+            saveBtn.disabled = true;
+            saveBtn.textContent = '保存中...';
+            await this.savePrompt(prompt);
+            saveBtn.textContent = '保存成功！';
+            setTimeout(() => {
+              saveBtn.disabled = false;
+              saveBtn.textContent = '保存提示词';
+            }, 2000);
+          } catch (error) {
+            alert('保存失败: ' + error.message);
+            saveBtn.disabled = false;
+            saveBtn.textContent = '保存提示词';
+          }
+        });
+      },
+
+      /**
+       * Save prompt to server
+       */
+      savePrompt: async function(prompt) {
+        const apiBaseUrl = ShopAIChat.API.getApiBaseUrl();
+
+        const response = await fetch(apiBaseUrl + '/api/user-prompt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...ShopAIChat.User.getAuthHeader()
+          },
+          body: JSON.stringify({
+            action: 'update',
+            prompt
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '保存失败');
+        }
+
+        // Update local state
+        ShopAIChat.User.currentPrompt = data.currentPrompt;
+        localStorage.setItem('shopChatCurrentPrompt', data.currentPrompt || '');
+
+        return data;
+      },
+
+      /**
+       * Load prompt history
+       */
+      loadHistory: async function(panel) {
+        const historyList = panel.querySelector('.shop-ai-history-list');
+        const apiBaseUrl = ShopAIChat.API.getApiBaseUrl();
+
+        try {
+          const response = await fetch(apiBaseUrl + '/api/user-prompt?action=history', {
+            headers: ShopAIChat.User.getAuthHeader()
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || '加载失败');
+          }
+
+          if (!data.history || data.history.length === 0) {
+            historyList.innerHTML = '<div class="shop-ai-no-history">暂无历史记录</div>';
+            return;
+          }
+
+          historyList.innerHTML = data.history.map(item => `
+            <div class="shop-ai-history-item" data-id="${item.id}">
+              <div class="shop-ai-history-meta">
+                <span class="shop-ai-history-version">版本 ${item.version}</span>
+                <span class="shop-ai-history-date">${new Date(item.createdAt).toLocaleString()}</span>
+              </div>
+              <div class="shop-ai-history-content">${this.truncateText(item.content, 100)}</div>
+              <button class="shop-ai-restore-btn" data-id="${item.id}">恢复此版本</button>
+            </div>
+          `).join('');
+
+          // Add restore handlers
+          historyList.querySelectorAll('.shop-ai-restore-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const historyId = e.target.dataset.id;
+              try {
+                btn.disabled = true;
+                btn.textContent = '恢复中...';
+                await this.restorePrompt(historyId);
+                
+                // Update editor
+                const editor = panel.querySelector('.shop-ai-prompt-editor');
+                editor.value = ShopAIChat.User.currentPrompt || '';
+                
+                // Switch to editor tab
+                panel.querySelector('.shop-ai-tab[data-tab="editor"]').click();
+                
+                alert('恢复成功！');
+              } catch (error) {
+                alert('恢复失败: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = '恢复此版本';
+              }
+            });
+          });
+        } catch (error) {
+          historyList.innerHTML = '<div class="shop-ai-error">加载失败: ' + error.message + '</div>';
+        }
+      },
+
+      /**
+       * Restore prompt from history
+       */
+      restorePrompt: async function(historyId) {
+        const apiBaseUrl = ShopAIChat.API.getApiBaseUrl();
+
+        const response = await fetch(apiBaseUrl + '/api/user-prompt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...ShopAIChat.User.getAuthHeader()
+          },
+          body: JSON.stringify({
+            action: 'restore',
+            historyId
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '恢复失败');
+        }
+
+        // Update local state
+        ShopAIChat.User.currentPrompt = data.currentPrompt;
+        localStorage.setItem('shopChatCurrentPrompt', data.currentPrompt || '');
+
+        return data;
+      },
+
+      /**
+       * Truncate text with ellipsis
+       */
+      truncateText: function(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
       }
     },
 
@@ -910,6 +1474,10 @@
       if (!container) return;
 
       this.UI.init(container);
+
+      // Initialize User module
+      this.User.init();
+      this.UI.updateUserButton();
 
       // Check for existing conversation
       const conversationId = sessionStorage.getItem('shopAiConversationId');

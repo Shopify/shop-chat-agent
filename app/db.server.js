@@ -257,3 +257,167 @@ export async function getCustomerAccountUrls(conversationId) {
     return null;
   }
 }
+
+// ============================================
+// ChatUser 用户管理相关函数
+// ============================================
+
+/**
+ * 创建新的聊天用户
+ * @param {string} shopId - 商店ID
+ * @param {string} username - 用户名
+ * @param {string} passwordHash - 密码哈希
+ * @returns {Promise<Object>} - 创建的用户
+ */
+export async function createChatUser(shopId, username, passwordHash) {
+  try {
+    return await prisma.chatUser.create({
+      data: {
+        shopId,
+        username,
+        passwordHash
+      }
+    });
+  } catch (error) {
+    console.error('Error creating chat user:', error);
+    throw error;
+  }
+}
+
+/**
+ * 根据商店ID和用户名查找用户
+ * @param {string} shopId - 商店ID
+ * @param {string} username - 用户名
+ * @returns {Promise<Object|null>} - 用户对象或null
+ */
+export async function getChatUserByUsername(shopId, username) {
+  try {
+    return await prisma.chatUser.findUnique({
+      where: {
+        shopId_username: { shopId, username }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting chat user:', error);
+    return null;
+  }
+}
+
+/**
+ * 根据ID查找用户
+ * @param {string} userId - 用户ID
+ * @returns {Promise<Object|null>} - 用户对象或null
+ */
+export async function getChatUserById(userId) {
+  try {
+    return await prisma.chatUser.findUnique({
+      where: { id: userId }
+    });
+  } catch (error) {
+    console.error('Error getting chat user by id:', error);
+    return null;
+  }
+}
+
+/**
+ * 更新用户的当前提示词
+ * @param {string} userId - 用户ID
+ * @param {string} prompt - 新的提示词
+ * @returns {Promise<Object>} - 更新后的用户对象
+ */
+export async function updateUserPrompt(userId, prompt) {
+  try {
+    // 获取当前用户以检查是否需要保存历史
+    const user = await prisma.chatUser.findUnique({
+      where: { id: userId }
+    });
+
+    // 如果用户有旧的提示词，保存到历史记录
+    if (user && user.currentPrompt) {
+      // 获取当前最大版本号
+      const lastHistory = await prisma.promptHistory.findFirst({
+        where: { userId },
+        orderBy: { version: 'desc' }
+      });
+      const newVersion = (lastHistory?.version || 0) + 1;
+
+      // 保存旧提示词到历史
+      await prisma.promptHistory.create({
+        data: {
+          userId,
+          content: user.currentPrompt,
+          version: newVersion
+        }
+      });
+    }
+
+    // 更新当前提示词
+    return await prisma.chatUser.update({
+      where: { id: userId },
+      data: {
+        currentPrompt: prompt,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user prompt:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取用户的提示词历史记录
+ * @param {string} userId - 用户ID
+ * @returns {Promise<Array>} - 提示词历史列表
+ */
+export async function getPromptHistory(userId) {
+  try {
+    return await prisma.promptHistory.findMany({
+      where: { userId },
+      orderBy: { version: 'desc' }
+    });
+  } catch (error) {
+    console.error('Error getting prompt history:', error);
+    return [];
+  }
+}
+
+/**
+ * 根据ID获取某个历史提示词
+ * @param {string} historyId - 历史记录ID
+ * @returns {Promise<Object|null>} - 历史记录或null
+ */
+export async function getPromptHistoryById(historyId) {
+  try {
+    return await prisma.promptHistory.findUnique({
+      where: { id: historyId }
+    });
+  } catch (error) {
+    console.error('Error getting prompt history by id:', error);
+    return null;
+  }
+}
+
+/**
+ * 恢复用户提示词到某个历史版本
+ * @param {string} userId - 用户ID
+ * @param {string} historyId - 历史记录ID
+ * @returns {Promise<Object>} - 更新后的用户对象
+ */
+export async function restorePromptFromHistory(userId, historyId) {
+  try {
+    const history = await prisma.promptHistory.findUnique({
+      where: { id: historyId }
+    });
+
+    if (!history || history.userId !== userId) {
+      throw new Error('History not found or unauthorized');
+    }
+
+    // 使用 updateUserPrompt 来保存当前提示词到历史并更新
+    return await updateUserPrompt(userId, history.content);
+  } catch (error) {
+    console.error('Error restoring prompt from history:', error);
+    throw error;
+  }
+}

@@ -12,10 +12,10 @@ import systemPrompts from "../prompts/prompts.json";
  * @returns {Object} Claude service with methods for interacting with Claude API
  */
 export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
-  // Initialize Claude client
-  const anthropic = new Anthropic({ 
-    apiKey: apiKey,
-    baseURL: 'https://proxy.shopify.ai/apis/anthropic'
+  // Initialize Claude client - call Anthropic directly using the official API key.
+  // We intentionally DO NOT use the Shopify AI proxy here to avoid X-Api-Key format issues.
+  const anthropic = new Anthropic({
+    apiKey: apiKey
   });
 
   /**
@@ -33,10 +33,26 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
   const streamConversation = async ({
     messages,
     promptType = AppConfig.api.defaultPromptType,
-    tools
+    tools,
+    systemOverride
   }, streamHandlers) => {
-    // Get system prompt from configuration or use default
-    const systemInstruction = getSystemPrompt(promptType);
+    // Get system prompt from configuration or use an override if provided
+    const systemInstruction = systemOverride && systemOverride.trim().length > 0
+      ? systemOverride
+      : getSystemPrompt(promptType);
+
+    // Log prompt usage for debugging/teaching
+    try {
+      console.log("======== Claude system prompt configuration ========");
+      console.log("Prompt type:", promptType);
+      console.log("Has override from frontend:", !!(systemOverride && systemOverride.trim().length > 0));
+      console.log("system prompt length:", systemInstruction ? systemInstruction.length : 0);
+      console.log("system prompt preview:", systemInstruction || "<empty>");
+      console.log("=====================================================");
+    } catch (e) {
+      // 日志本身出错时不要影响正常请求
+      console.warn("Failed to log system prompt configuration:", e?.message || e);
+    }
 
     // Create stream
     const stream = await anthropic.messages.stream({

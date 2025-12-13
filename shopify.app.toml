@@ -1,28 +1,30 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "YOUR_CLIENT_ID"
-name = "shop-chat-agent"
-handle = "shop-chat-agent"
-application_url = "https://shop-chat-agent.com"
+client_id = "4112cc090597f73175212de8b77b148d"
+name = "shop-chat-agent-app"
+application_url = "https://example.com"
 embedded = true
+handle = "shop-chat-agent-app"
 
 [build]
+automatically_update_urls_on_dev = true
 include_config_on_deploy = true
 
 [webhooks]
-api_version = "2025-04"
+api_version = "2026-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "customer_read_customers,customer_read_orders,customer_read_store_credit_account_transactions,customer_read_store_credit_accounts,unauthenticated_read_product_listings"
+# Admin API scopes (标准权限 - 用于读取店铺数据)
+# Customer Account API scopes (客户账户权限)
+# 注意：更改scopes后需要重新安装App才能生效
+scopes = "read_orders,read_products,read_customers,read_inventory,write_products,customer_read_customers,customer_read_orders,customer_read_store_credit_account_transactions,customer_read_store_credit_accounts,unauthenticated_read_product_listings"
 
 [auth]
-redirect_urls = [ "https://shop-chat-agent.com/api/auth" ]
+redirect_urls = [ "https://example.com/api/auth" ]
 
 [pos]
 embedded = false
 
 [customer_authentication]
-redirect_uris = [
-  "https://shop-chat-agent.com/callback"
-]
+redirect_uris = [ "https://shop-chat-agent.com/callback" ]
