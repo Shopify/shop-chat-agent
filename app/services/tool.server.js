@@ -111,19 +111,50 @@ export function createToolService() {
   };
 
   /**
+   * Normalizes content to a string format for Anthropic API compatibility
+   * @param {*} content - The content to normalize (can be array, object, or string)
+   * @returns {string} Normalized string content
+   */
+  const normalizeToolResultContent = (content) => {
+    if (content === undefined || content === null) {
+      return 'No content returned';
+    }
+
+    if (Array.isArray(content)) {
+      // MCP returns content as [{type: "text", text: "..."}]
+      // Extract text from each item and join
+      return content.map(item => {
+        if (typeof item === 'object' && item !== null) {
+          return item.text || JSON.stringify(item);
+        }
+        return String(item);
+      }).join('\n');
+    }
+
+    if (typeof content === 'object') {
+      return JSON.stringify(content);
+    }
+
+    return String(content);
+  };
+
+  /**
    * Adds a tool result to the conversation history
    * @param {Array} conversationHistory - The conversation history
    * @param {string} toolUseId - The ID of the tool use request
-   * @param {string} content - The content of the tool result
+   * @param {*} content - The content of the tool result (will be normalized to string)
    * @param {string} conversationId - The conversation ID
    */
   const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId) => {
+    // Normalize content to string format for Anthropic API compatibility
+    const normalizedContent = normalizeToolResultContent(content);
+
     const toolResultMessage = {
       role: 'user',
       content: [{
         type: "tool_result",
         tool_use_id: toolUseId,
-        content: content
+        content: normalizedContent
       }]
     };
 
