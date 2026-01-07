@@ -114,9 +114,10 @@
        * Toggle chat window visibility
        */
       toggleChatWindow: function() {
-        const { chatWindow, chatInput } = this.elements;
+        const { chatWindow, chatInput,container } = this.elements;
 
         chatWindow.classList.toggle('active');
+        container.classList.toggle("chat-open"); // ✅ added
 
         if (chatWindow.classList.contains('active')) {
           // On mobile, prevent body scrolling and delay focus
@@ -138,9 +139,10 @@
        * Close chat window
        */
       closeChatWindow: function() {
-        const { chatWindow, chatInput } = this.elements;
+        const { chatWindow, chatInput ,container} = this.elements;
 
         chatWindow.classList.remove('active');
+        container.classList.remove("chat-open"); // ✅ added
 
         // On mobile, blur input to hide keyboard and enable body scrolling
         if (this.isMobile) {
