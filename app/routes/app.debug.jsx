@@ -5,12 +5,20 @@
 import { useLoaderData, useRevalidator } from "react-router";
 import { authenticate } from "../shopify.server";
 import { getDebugData, clearDebugData } from "../services/debug.server";
+import AppConfig from "../services/config.server";
 import { useEffect, useState } from "react";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
   const debugData = getDebugData();
-  return { debugData };
+  return { 
+    debugData,
+    modelInfo: {
+      name: AppConfig.api.defaultModel,
+      maxTokens: AppConfig.api.maxTokens,
+      promptType: AppConfig.api.defaultPromptType
+    }
+  };
 };
 
 export const action = async ({ request }) => {
@@ -26,12 +34,13 @@ export const action = async ({ request }) => {
 };
 
 export default function DebugDashboard() {
-  const { debugData } = useLoaderData();
+  const { debugData, modelInfo } = useLoaderData();
   const revalidator = useRevalidator();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [expandedTools, setExpandedTools] = useState(new Set());
   const [expandedEvents, setExpandedEvents] = useState(new Set());
+  const [showArchitecture, setShowArchitecture] = useState(true);
 
   const toggleToolExpanded = (index) => {
     const newExpanded = new Set(expandedTools);
@@ -102,10 +111,268 @@ export default function DebugDashboard() {
     }
   };
 
+  // Build sequence timeline from conversation
+  const buildSequenceTimeline = (conv) => {
+    if (!conv) return [];
+    
+    const timeline = [];
+    let stepNum = 1;
+    
+    // MCP Connections
+    conv.mcpConnections.forEach(mcp => {
+      timeline.push({
+        step: stepNum++,
+        type: 'mcp_connect',
+        actor: 'App',
+        target: 'Shopify MCP',
+        action: `Connect to ${mcp.serverType} MCP`,
+        detail: `${mcp.toolCount} tools available`,
+        latency: mcp.latencyMs,
+        timestamp: mcp.timestamp
+      });
+    });
+    
+    // Interleave messages and tool calls by timestamp
+    const events = [
+      ...conv.messages.map(m => ({ ...m, eventType: 'message' })),
+      ...conv.toolCalls.map(t => ({ ...t, eventType: 'tool' }))
+    ].sort((a, b) => a.timestamp - b.timestamp);
+    
+    events.forEach(event => {
+      if (event.eventType === 'message') {
+        if (event.role === 'user') {
+          timeline.push({
+            step: stepNum++,
+            type: 'user_message',
+            actor: 'Customer',
+            target: 'Claude LLM',
+            action: 'Send message',
+            detail: event.contentPreview,
+            timestamp: event.timestamp
+          });
+        } else {
+          timeline.push({
+            step: stepNum++,
+            type: 'llm_response',
+            actor: 'Claude LLM',
+            target: 'Customer',
+            action: 'Generate response',
+            detail: event.contentPreview,
+            timestamp: event.timestamp
+          });
+        }
+      } else if (event.eventType === 'tool') {
+        // LLM decides to use tool
+        timeline.push({
+          step: stepNum++,
+          type: 'llm_decision',
+          actor: 'Claude LLM',
+          target: 'Shopify MCP',
+          action: `Invoke tool: ${event.toolName}`,
+          detail: JSON.stringify(event.toolArgs),
+          timestamp: event.timestamp
+        });
+        // MCP executes and returns
+        timeline.push({
+          step: stepNum++,
+          type: 'mcp_response',
+          actor: 'Shopify MCP',
+          target: 'Claude LLM',
+          action: `Return ${event.success ? 'results' : 'error'}`,
+          detail: event.result?.substring(0, 100) + '...',
+          latency: event.latencyMs,
+          timestamp: event.timestamp
+        });
+      }
+    });
+    
+    return timeline;
+  };
+
+  const getActorStyle = (actor) => {
+    switch (actor) {
+      case 'Customer': return { bg: '#dbeafe', border: '#3b82f6', icon: '👤' };
+      case 'Claude LLM': return { bg: '#fef3c7', border: '#f59e0b', icon: '🧠' };
+      case 'Shopify MCP': return { bg: '#d1fae5', border: '#10b981', icon: '🔌' };
+      case 'App': return { bg: '#e0e7ff', border: '#6366f1', icon: '⚙️' };
+      default: return { bg: '#f3f4f6', border: '#9ca3af', icon: '📦' };
+    }
+  };
+
   return (
     <s-page>
       <ui-title-bar title="🔍 Debug Dashboard - AI Chat Monitor" />
       
+      {/* Architecture Overview Toggle */}
+      <s-section>
+        <s-inline gap="base">
+          <s-button 
+            variant={showArchitecture ? "primary" : "tertiary"}
+            onClick={() => setShowArchitecture(!showArchitecture)}
+          >
+            {showArchitecture ? '🏗️ Hide Architecture' : '🏗️ Show Architecture'}
+          </s-button>
+        </s-inline>
+      </s-section>
+
+      {/* Architecture & Model Info */}
+      {showArchitecture && (
+        <s-section>
+          <s-stack gap="loose">
+            {/* Architecture Diagram */}
+            <s-card>
+              <s-stack gap="base">
+                <s-text variant="headingMd">🏗️ System Architecture: LLM ↔ MCP Flow</s-text>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: '20px',
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                  borderRadius: '12px',
+                  gap: '8px',
+                  flexWrap: 'wrap'
+                }}>
+                  {/* Customer */}
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '16px 24px', 
+                    background: '#dbeafe', 
+                    borderRadius: '12px',
+                    border: '2px solid #3b82f6',
+                    minWidth: '120px'
+                  }}>
+                    <div style={{ fontSize: '32px' }}>👤</div>
+                    <s-text variant="bodyMd" fontWeight="bold">Customer</s-text>
+                    <s-text variant="bodySm" tone="subdued">Asks questions</s-text>
+                  </div>
+                  
+                  <div style={{ fontSize: '24px', color: '#64748b' }}>→</div>
+                  
+                  {/* Claude LLM */}
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '16px 24px', 
+                    background: '#fef3c7', 
+                    borderRadius: '12px',
+                    border: '2px solid #f59e0b',
+                    minWidth: '140px'
+                  }}>
+                    <div style={{ fontSize: '32px' }}>🧠</div>
+                    <s-text variant="bodyMd" fontWeight="bold">Claude LLM</s-text>
+                    <s-text variant="bodySm" tone="subdued">Understands & reasons</s-text>
+                  </div>
+                  
+                  <div style={{ fontSize: '24px', color: '#64748b' }}>⇄</div>
+                  
+                  {/* MCP */}
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '16px 24px', 
+                    background: '#d1fae5', 
+                    borderRadius: '12px',
+                    border: '2px solid #10b981',
+                    minWidth: '140px'
+                  }}>
+                    <div style={{ fontSize: '32px' }}>🔌</div>
+                    <s-text variant="bodyMd" fontWeight="bold">Storefront MCP</s-text>
+                    <s-text variant="bodySm" tone="subdued">Executes Shopify API</s-text>
+                  </div>
+                  
+                  <div style={{ fontSize: '24px', color: '#64748b' }}>→</div>
+                  
+                  {/* Shopify */}
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '16px 24px', 
+                    background: '#fce7f3', 
+                    borderRadius: '12px',
+                    border: '2px solid #ec4899',
+                    minWidth: '120px'
+                  }}>
+                    <div style={{ fontSize: '32px' }}>🛍️</div>
+                    <s-text variant="bodyMd" fontWeight="bold">Shopify Store</s-text>
+                    <s-text variant="bodySm" tone="subdued">Products, Cart, etc.</s-text>
+                  </div>
+                </div>
+              </s-stack>
+            </s-card>
+
+            {/* Who Does What */}
+            <s-inline gap="base" blockAlign="start">
+              {/* LLM Card */}
+              <s-card style={{ flex: 1 }}>
+                <s-stack gap="tight">
+                  <s-inline gap="tight">
+                    <span style={{ fontSize: '24px' }}>🧠</span>
+                    <s-text variant="headingMd">Claude LLM</s-text>
+                  </s-inline>
+                  <s-badge tone="warning">{modelInfo.name}</s-badge>
+                  <s-text variant="bodySm" tone="subdued">Max {modelInfo.maxTokens} tokens/response</s-text>
+                  
+                  <div style={{ marginTop: '8px', padding: '12px', background: '#fffbeb', borderRadius: '8px' }}>
+                    <s-text variant="bodySm" fontWeight="semibold">What Claude does:</s-text>
+                    <ul style={{ margin: '8px 0 0 16px', fontSize: '13px', color: '#78716c' }}>
+                      <li>✅ Understands natural language</li>
+                      <li>✅ Reasons about customer intent</li>
+                      <li>✅ Decides WHICH tool to use</li>
+                      <li>✅ Crafts the tool arguments</li>
+                      <li>✅ Interprets results for customer</li>
+                      <li>✅ Generates conversational response</li>
+                    </ul>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#fef2f2', borderRadius: '8px' }}>
+                    <s-text variant="bodySm" fontWeight="semibold">What Claude does NOT do:</s-text>
+                    <ul style={{ margin: '8px 0 0 16px', fontSize: '13px', color: '#78716c' }}>
+                      <li>❌ Access store data directly</li>
+                      <li>❌ Execute API calls</li>
+                      <li>❌ Modify cart/checkout</li>
+                    </ul>
+                  </div>
+                </s-stack>
+              </s-card>
+
+              {/* MCP Card */}
+              <s-card style={{ flex: 1 }}>
+                <s-stack gap="tight">
+                  <s-inline gap="tight">
+                    <span style={{ fontSize: '24px' }}>🔌</span>
+                    <s-text variant="headingMd">Shopify Storefront MCP</s-text>
+                  </s-inline>
+                  <s-badge tone="success">Model Context Protocol</s-badge>
+                  <s-text variant="bodySm" tone="subdued">Secure API bridge</s-text>
+                  
+                  <div style={{ marginTop: '8px', padding: '12px', background: '#ecfdf5', borderRadius: '8px' }}>
+                    <s-text variant="bodySm" fontWeight="semibold">What MCP does:</s-text>
+                    <ul style={{ margin: '8px 0 0 16px', fontSize: '13px', color: '#78716c' }}>
+                      <li>✅ Provides available tools to LLM</li>
+                      <li>✅ Executes Shopify API calls</li>
+                      <li>✅ Searches product catalog</li>
+                      <li>✅ Manages shopping cart</li>
+                      <li>✅ Returns structured data</li>
+                      <li>✅ Handles authentication</li>
+                    </ul>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+                    <s-text variant="bodySm" fontWeight="semibold">Available Tools:</s-text>
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <s-badge>search_shop_catalog</s-badge>
+                      <s-badge>get_product_details</s-badge>
+                      <s-badge>update_cart</s-badge>
+                      <s-badge>get_cart</s-badge>
+                      <s-badge>get_shop_info</s-badge>
+                    </div>
+                  </div>
+                </s-stack>
+              </s-card>
+            </s-inline>
+          </s-stack>
+        </s-section>
+      )}
+
       {/* Stats Overview */}
       <s-section>
         <s-stack gap="loose">
@@ -232,6 +499,80 @@ export default function DebugDashboard() {
               <s-button variant="tertiary" onClick={() => setSelectedConversation(null)}>
                 ← Back to Event Stream
               </s-button>
+              
+              {/* Sequence Timeline */}
+              <s-card>
+                <s-stack gap="tight">
+                  <s-text variant="headingSm">📋 Step-by-Step Sequence</s-text>
+                  <s-text variant="bodySm" tone="subdued">Exact order of operations in this conversation</s-text>
+                  
+                  <div style={{ marginTop: '12px' }}>
+                    {buildSequenceTimeline(selectedConversation).map((step, idx) => {
+                      const actorStyle = getActorStyle(step.actor);
+                      const targetStyle = getActorStyle(step.target);
+                      
+                      return (
+                        <div 
+                          key={idx}
+                          style={{ 
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            marginBottom: '8px',
+                            padding: '10px',
+                            background: actorStyle.bg,
+                            borderRadius: '8px',
+                            borderLeft: `4px solid ${actorStyle.border}`
+                          }}
+                        >
+                          {/* Step Number */}
+                          <div style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: actorStyle.border,
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            marginRight: '12px',
+                            flexShrink: 0
+                          }}>
+                            {step.step}
+                          </div>
+                          
+                          {/* Content */}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <span>{actorStyle.icon}</span>
+                              <s-text variant="bodySm" fontWeight="bold">{step.actor}</s-text>
+                              <span style={{ color: '#9ca3af' }}>→</span>
+                              <span>{targetStyle.icon}</span>
+                              <s-text variant="bodySm" fontWeight="bold">{step.target}</s-text>
+                              {step.latency && (
+                                <s-badge tone="info">⏱️ {step.latency}ms</s-badge>
+                              )}
+                            </div>
+                            <s-text variant="bodySm" fontWeight="medium">{step.action}</s-text>
+                            {step.detail && (
+                              <s-text variant="bodySm" tone="subdued" style={{ 
+                                display: 'block',
+                                marginTop: '4px',
+                                fontFamily: step.type === 'llm_decision' ? 'Monaco, Consolas, monospace' : 'inherit',
+                                fontSize: step.type === 'llm_decision' ? '11px' : '13px',
+                                wordBreak: 'break-word'
+                              }}>
+                                {step.detail.length > 150 ? step.detail.substring(0, 150) + '...' : step.detail}
+                              </s-text>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </s-stack>
+              </s-card>
               
               {/* Token Usage Bar */}
               <s-card>
