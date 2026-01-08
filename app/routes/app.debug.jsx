@@ -698,37 +698,45 @@ export default function DebugDashboard() {
                 </s-stack>
               </s-card>
               
-              {/* Token Usage Bar */}
+              {/* Token Usage */}
               <s-card>
                 <s-stack gap="tight">
                   <s-text variant="headingSm">Token Usage</s-text>
-                  <div style={{ display: 'flex', height: '24px', borderRadius: '4px', overflow: 'hidden', background: '#e5e7eb' }}>
+                  
+                  {/* Stats row */}
+                  <div style={{ display: 'flex', gap: '24px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#3b82f6' }}></div>
+                      <s-text variant="bodySm">Input:</s-text>
+                      <s-text variant="bodySm" fontWeight="bold">{formatTokens(selectedConversation.tokenUsage.input)}</s-text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#22c55e' }}></div>
+                      <s-text variant="bodySm">Output:</s-text>
+                      <s-text variant="bodySm" fontWeight="bold">{formatTokens(selectedConversation.tokenUsage.output)}</s-text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <s-text variant="bodySm">Total:</s-text>
+                      <s-text variant="bodySm" fontWeight="bold">{formatTokens(selectedConversation.tokenUsage.total)}</s-text>
+                    </div>
+                  </div>
+                  
+                  {/* Visual bar */}
+                  <div style={{ display: 'flex', height: '20px', borderRadius: '4px', overflow: 'hidden', background: '#e5e7eb' }}>
                     <div 
                       style={{ 
                         width: `${(selectedConversation.tokenUsage.input / (selectedConversation.tokenUsage.total || 1)) * 100}%`,
                         background: '#3b82f6',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '11px'
+                        minWidth: '4px'
                       }}
-                    >
-                      In: {selectedConversation.tokenUsage.input}
-                    </div>
+                    />
                     <div 
                       style={{ 
                         width: `${(selectedConversation.tokenUsage.output / (selectedConversation.tokenUsage.total || 1)) * 100}%`,
                         background: '#22c55e',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '11px'
+                        minWidth: '4px'
                       }}
-                    >
-                      Out: {selectedConversation.tokenUsage.output}
-                    </div>
+                    />
                   </div>
                 </s-stack>
               </s-card>

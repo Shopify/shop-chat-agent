@@ -169,7 +169,7 @@ export function recordMessage(conversationId, role, content) {
   if (conversation) {
     conversation.messages.push({
       role,
-      contentPreview: typeof content === 'string' ? content.substring(0, 100) : '[complex content]',
+      contentPreview: typeof content === 'string' ? content.substring(0, 500) : '[complex content]',
       timestamp: Date.now()
     });
   }
@@ -177,7 +177,7 @@ export function recordMessage(conversationId, role, content) {
   addEvent(createEvent('message', {
     conversationId,
     role,
-    contentPreview: typeof content === 'string' ? content.substring(0, 100) : '[complex content]'
+    contentPreview: typeof content === 'string' ? content.substring(0, 500) : '[complex content]'
   }));
 }
 
