@@ -40,7 +40,18 @@ export default function DebugDashboard() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [expandedTools, setExpandedTools] = useState(new Set());
   const [expandedEvents, setExpandedEvents] = useState(new Set());
+  const [expandedSteps, setExpandedSteps] = useState(new Set());
   const [showArchitecture, setShowArchitecture] = useState(true);
+
+  const toggleStepExpanded = (stepId) => {
+    const newExpanded = new Set(expandedSteps);
+    if (newExpanded.has(stepId)) {
+      newExpanded.delete(stepId);
+    } else {
+      newExpanded.add(stepId);
+    }
+    setExpandedSteps(newExpanded);
+  };
 
   const toggleToolExpanded = (index) => {
     const newExpanded = new Set(expandedTools);
@@ -177,8 +188,11 @@ export default function DebugDashboard() {
           actor: 'Claude LLM',
           target: 'Shopify MCP',
           action: `Invoke tool: ${event.toolName}`,
+          toolName: event.toolName,
+          toolArgs: event.toolArgs,  // Keep full args for expansion
           detail: JSON.stringify(event.toolArgs),
-          timestamp: event.timestamp
+          timestamp: event.timestamp,
+          expandable: true
         });
         // MCP executes and returns
         timeline.push({
@@ -187,9 +201,12 @@ export default function DebugDashboard() {
           actor: 'Shopify MCP',
           target: 'Claude LLM',
           action: `Return ${event.success ? 'results' : 'error'}`,
+          result: event.result,  // Keep full result for expansion
           detail: event.result?.substring(0, 100) + '...',
           latency: event.latencyMs,
-          timestamp: event.timestamp
+          timestamp: event.timestamp,
+          success: event.success,
+          expandable: true
         });
       }
     });
@@ -518,6 +535,8 @@ export default function DebugDashboard() {
                     {buildSequenceTimeline(selectedConversation).map((step, idx) => {
                       const actorStyle = getActorStyle(step.actor);
                       const targetStyle = getActorStyle(step.target);
+                      const stepId = `step-${idx}`;
+                      const isExpanded = expandedSteps.has(stepId);
                       
                       return (
                         <div 
@@ -529,8 +548,10 @@ export default function DebugDashboard() {
                             padding: '10px',
                             background: actorStyle.bg,
                             borderRadius: '8px',
-                            borderLeft: `4px solid ${actorStyle.border}`
+                            borderLeft: `4px solid ${actorStyle.border}`,
+                            cursor: step.expandable ? 'pointer' : 'default'
                           }}
+                          onClick={() => step.expandable && toggleStepExpanded(stepId)}
                         >
                           {/* Step Number */}
                           <div style={{
@@ -561,6 +582,11 @@ export default function DebugDashboard() {
                               {step.latency && (
                                 <s-badge tone="info">⏱️ {step.latency}ms</s-badge>
                               )}
+                              {step.expandable && (
+                                <s-text variant="bodySm" tone="subdued" style={{ marginLeft: 'auto' }}>
+                                  {isExpanded ? '▼ Collapse' : '▶ Expand'}
+                                </s-text>
+                              )}
                             </div>
                             <s-text variant="bodySm" fontWeight="medium" style={{ fontStyle: 'italic' }}>{step.action}</s-text>
                             
@@ -578,16 +604,90 @@ export default function DebugDashboard() {
                               </div>
                             )}
                             
-                            {/* Other step types - show detail */}
-                            {step.type !== 'mcp_connect' && step.detail && (
+                            {/* LLM Decision (tool invocation) - show args */}
+                            {step.type === 'llm_decision' && (
+                              <div style={{ marginTop: '6px' }}>
+                                {!isExpanded && step.detail && (
+                                  <s-text variant="bodySm" tone="subdued" style={{ 
+                                    display: 'block',
+                                    fontFamily: 'Monaco, Consolas, monospace',
+                                    fontSize: '11px',
+                                    wordBreak: 'break-word'
+                                  }}>
+                                    {step.detail.length > 100 ? step.detail.substring(0, 100) + '...' : step.detail}
+                                  </s-text>
+                                )}
+                                {isExpanded && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📥 Full Arguments:</s-text>
+                                    <pre style={{ 
+                                      background: '#1e293b', 
+                                      color: '#e2e8f0', 
+                                      padding: '12px', 
+                                      borderRadius: '6px', 
+                                      fontSize: '11px',
+                                      overflow: 'auto',
+                                      maxHeight: '250px',
+                                      marginTop: '4px',
+                                      fontFamily: 'Monaco, Consolas, monospace',
+                                      whiteSpace: 'pre-wrap',
+                                      wordBreak: 'break-word'
+                                    }}>
+                                      {formatJson(step.toolArgs)}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* MCP Response - show result */}
+                            {step.type === 'mcp_response' && (
+                              <div style={{ marginTop: '6px' }}>
+                                <s-badge tone={step.success !== false ? 'success' : 'critical'}>
+                                  {step.success !== false ? '✓ Success' : '✗ Error'}
+                                </s-badge>
+                                {!isExpanded && step.detail && (
+                                  <s-text variant="bodySm" tone="subdued" style={{ 
+                                    display: 'block',
+                                    marginTop: '4px',
+                                    fontFamily: 'Monaco, Consolas, monospace',
+                                    fontSize: '11px',
+                                    wordBreak: 'break-word'
+                                  }}>
+                                    {step.detail}
+                                  </s-text>
+                                )}
+                                {isExpanded && step.result && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📤 Full Result:</s-text>
+                                    <pre style={{ 
+                                      background: '#1e293b', 
+                                      color: '#e2e8f0', 
+                                      padding: '12px', 
+                                      borderRadius: '6px', 
+                                      fontSize: '11px',
+                                      overflow: 'auto',
+                                      maxHeight: '300px',
+                                      marginTop: '4px',
+                                      fontFamily: 'Monaco, Consolas, monospace',
+                                      whiteSpace: 'pre-wrap',
+                                      wordBreak: 'break-word'
+                                    }}>
+                                      {step.result}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* User/Assistant messages - show detail */}
+                            {(step.type === 'user_message' || step.type === 'llm_response') && step.detail && (
                               <s-text variant="bodySm" tone="subdued" style={{ 
                                 display: 'block',
                                 marginTop: '4px',
-                                fontFamily: step.type === 'llm_decision' ? 'Monaco, Consolas, monospace' : 'inherit',
-                                fontSize: step.type === 'llm_decision' ? '11px' : '13px',
                                 wordBreak: 'break-word'
                               }}>
-                                {step.detail.length > 150 ? step.detail.substring(0, 150) + '...' : step.detail}
+                                {step.detail}
                               </s-text>
                             )}
                           </div>
