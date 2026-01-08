@@ -169,9 +169,13 @@ async function handleChatSession({
       console.log(`Connected to MCP with ${storefrontMcpTools.length} tools`);
       console.log(`Connected to customer MCP with ${customerMcpTools.length} tools`);
       
+      // Extract tool names for debug display
+      const storefrontToolNames = storefrontMcpTools.map(t => t.name);
+      const customerToolNames = customerMcpTools.map(t => t.name);
+      
       // Record MCP connections for debug
-      recordMcpConnection(conversationId, 'storefront', `${shopDomain}/api/mcp`, storefrontMcpTools.length, storefrontLatency);
-      recordMcpConnection(conversationId, 'customer', mcpApiUrl || 'customer-api', customerMcpTools.length, customerLatency);
+      recordMcpConnection(conversationId, 'storefront', `${shopDomain}/api/mcp`, storefrontMcpTools.length, storefrontLatency, storefrontToolNames);
+      recordMcpConnection(conversationId, 'customer', mcpApiUrl || 'customer-api', customerMcpTools.length, customerLatency, customerToolNames);
     } catch (error) {
       console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
       recordError(conversationId, 'mcp_connection', error.message);

@@ -126,7 +126,8 @@ export default function DebugDashboard() {
         actor: 'App',
         target: 'Shopify MCP',
         action: `Connect to ${mcp.serverType} MCP`,
-        detail: `${mcp.toolCount} tools available`,
+        toolCount: mcp.toolCount,
+        toolNames: mcp.toolNames || [],
         latency: mcp.latencyMs,
         timestamp: mcp.timestamp
       });
@@ -140,6 +141,13 @@ export default function DebugDashboard() {
     
     events.forEach(event => {
       if (event.eventType === 'message') {
+        // Clean up the content preview - add space after common patterns
+        let cleanedPreview = event.contentPreview || '';
+        // Fix common concatenation issues (e.g., "responsePerfect" -> "response Perfect")
+        cleanedPreview = cleanedPreview
+          .replace(/([a-z])([A-Z])/g, '$1 $2')  // camelCase to spaces
+          .replace(/([.!?])([A-Z])/g, '$1 $2'); // Missing space after punctuation
+        
         if (event.role === 'user') {
           timeline.push({
             step: stepNum++,
@@ -147,7 +155,7 @@ export default function DebugDashboard() {
             actor: 'Customer',
             target: 'Claude LLM',
             action: 'Send message',
-            detail: event.contentPreview,
+            detail: cleanedPreview,
             timestamp: event.timestamp
           });
         } else {
@@ -157,7 +165,7 @@ export default function DebugDashboard() {
             actor: 'Claude LLM',
             target: 'Customer',
             action: 'Generate response',
-            detail: event.contentPreview,
+            detail: cleanedPreview,
             timestamp: event.timestamp
           });
         }
@@ -554,8 +562,24 @@ export default function DebugDashboard() {
                                 <s-badge tone="info">⏱️ {step.latency}ms</s-badge>
                               )}
                             </div>
-                            <s-text variant="bodySm" fontWeight="medium">{step.action}</s-text>
-                            {step.detail && (
+                            <s-text variant="bodySm" fontWeight="medium" style={{ fontStyle: 'italic' }}>{step.action}</s-text>
+                            
+                            {/* MCP Connection - show tool count and names */}
+                            {step.type === 'mcp_connect' && (
+                              <div style={{ marginTop: '6px' }}>
+                                <s-badge tone="success">{step.toolCount} tools available</s-badge>
+                                {step.toolNames && step.toolNames.length > 0 && (
+                                  <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {step.toolNames.map((name, i) => (
+                                      <s-badge key={i} tone="info" style={{ fontSize: '10px' }}>{name}</s-badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Other step types - show detail */}
+                            {step.type !== 'mcp_connect' && step.detail && (
                               <s-text variant="bodySm" tone="subdued" style={{ 
                                 display: 'block',
                                 marginTop: '4px',

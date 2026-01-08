@@ -72,14 +72,16 @@ export function recordConversationStart(conversationId, shopDomain) {
  * @param {string} serverUrl - Server URL
  * @param {number} toolCount - Number of tools available
  * @param {number} latencyMs - Connection latency in ms
+ * @param {Array} toolNames - Names of available tools
  */
-export function recordMcpConnection(conversationId, serverType, serverUrl, toolCount, latencyMs) {
+export function recordMcpConnection(conversationId, serverType, serverUrl, toolCount, latencyMs, toolNames = []) {
   const conversation = debugStore.conversations.get(conversationId);
   if (conversation) {
     conversation.mcpConnections.push({
       serverType,
       serverUrl,
       toolCount,
+      toolNames,
       latencyMs,
       timestamp: Date.now()
     });
@@ -90,6 +92,7 @@ export function recordMcpConnection(conversationId, serverType, serverUrl, toolC
     serverType,
     serverUrl,
     toolCount,
+    toolNames,
     latencyMs
   }));
 }
