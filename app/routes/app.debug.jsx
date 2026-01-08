@@ -152,12 +152,10 @@ export default function DebugDashboard() {
     
     events.forEach(event => {
       if (event.eventType === 'message') {
-        // Clean up the content preview - add space after common patterns
+        // Clean up the content preview - the action label may be concatenated with content
         let cleanedPreview = event.contentPreview || '';
-        // Fix common concatenation issues (e.g., "responsePerfect" -> "response Perfect")
-        cleanedPreview = cleanedPreview
-          .replace(/([a-z])([A-Z])/g, '$1 $2')  // camelCase to spaces
-          .replace(/([.!?])([A-Z])/g, '$1 $2'); // Missing space after punctuation
+        // Note: The preview might include the action label prefix, just show content as-is
+        // It will be displayed separately from the action
         
         if (event.role === 'user') {
           timeline.push({
@@ -588,7 +586,9 @@ export default function DebugDashboard() {
                                 </s-text>
                               )}
                             </div>
-                            <s-text variant="bodySm" fontWeight="medium" style={{ fontStyle: 'italic' }}>{step.action}</s-text>
+                            <div style={{ marginBottom: '4px' }}>
+                              <s-text variant="bodySm" fontWeight="medium" style={{ fontStyle: 'italic' }}>{step.action}</s-text>
+                            </div>
                             
                             {/* MCP Connection - show tool count and names */}
                             {step.type === 'mcp_connect' && (
