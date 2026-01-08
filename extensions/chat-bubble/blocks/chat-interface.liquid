@@ -34,7 +34,8 @@
 <script>
   window.shopChatConfig = {
     promptType: {{ block.settings.system_prompt | json }},
-    welcomeMessage: {{ block.settings.welcome_message | json }}
+    welcomeMessage: {{ block.settings.welcome_message | json }},
+    chatApiUrl: {{ block.settings.chat_api_url | json }}
   };
   window.shopId = {{ shop.id }};
 </script>
@@ -68,9 +69,20 @@
         {
           "value": "enthusiasticAssistant",
           "label": "Enthusiastic Assistant"
+        },
+        {
+          "value": "ShakespeareAssistant",
+          "label": "Shakespeare Assistant"
         }
       ],
       "default": "standardAssistant"
+    },
+    {
+      "type": "text",
+      "id": "chat_api_url",
+      "label": "Chat API URL",
+      "default": "https://your-tunnel-url.trycloudflare.com/chat",
+      "info": "REQUIRED: In terminal run 'shopify app dev', press 'a', copy the App URL and add '/chat' to the end. Replace this placeholder with your actual tunnel URL."
     }
   ]
 }

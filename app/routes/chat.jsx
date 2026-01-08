@@ -126,7 +126,8 @@ async function handleChatSession({
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
   const shopDomain = request.headers.get("Origin");
-  const { mcpApiUrl } = await getCustomerAccountUrls(shopDomain, conversationId);
+  const urls = await getCustomerAccountUrls(shopDomain, conversationId);
+  const mcpApiUrl = urls?.mcpApiUrl || null;
 
   const mcpClient = new MCPClient(
     shopDomain,
@@ -178,6 +179,8 @@ async function handleChatSession({
 
     // Execute the conversation stream
     let finalMessage = { role: 'user', content: userMessage };
+    let insideThinking = false;
+    let thinkingBuffer = '';
 
     while (finalMessage.stop_reason !== "end_turn") {
       finalMessage = await claudeService.streamConversation(
@@ -189,10 +192,37 @@ async function handleChatSession({
         {
           // Handle text chunks
           onText: (textDelta) => {
-            stream.sendMessage({
-              type: 'chunk',
-              chunk: textDelta
-            });
+            // Filter out thinking tags
+            thinkingBuffer += textDelta;
+            
+            // Check if we're entering or leaving thinking mode
+            if (thinkingBuffer.includes('<thinking>')) {
+              insideThinking = true;
+              thinkingBuffer = thinkingBuffer.split('<thinking>').pop();
+            }
+            
+            if (thinkingBuffer.includes('</thinking>')) {
+              insideThinking = false;
+              thinkingBuffer = thinkingBuffer.split('</thinking>').pop();
+            }
+            
+            // Only send non-thinking text
+            if (!insideThinking && !textDelta.includes('<thinking>') && !textDelta.includes('</thinking>')) {
+              // Clean any partial thinking tags from the buffer
+              const cleanText = thinkingBuffer.replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+                                               .replace(/<thinking>[\s\S]*$/g, '')
+                                               .replace(/^[\s\S]*?<\/thinking>/g, '');
+              if (cleanText) {
+                stream.sendMessage({
+                  type: 'chunk',
+                  chunk: cleanText
+                });
+                thinkingBuffer = '';
+              }
+            } else if (!insideThinking) {
+              // Clear buffer when transitioning
+              thinkingBuffer = '';
+            }
           },
 
           // Handle complete messages
