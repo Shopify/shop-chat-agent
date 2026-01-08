@@ -25,6 +25,7 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
    * @param {Function} streamHandlers.onText - Handles text chunks
    * @param {Function} streamHandlers.onMessage - Handles complete messages
    * @param {Function} streamHandlers.onToolUse - Handles tool use requests
+   * @param {Function} streamHandlers.onTokenUsage - Handles token usage tracking
    * @returns {Promise<Object>} The final message
    */
   const streamConversation = async ({
@@ -59,6 +60,15 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
 
     // Wait for final message
     const finalMessage = await stream.finalMessage();
+
+    // Track token usage if handler provided
+    if (streamHandlers.onTokenUsage && finalMessage.usage) {
+      streamHandlers.onTokenUsage({
+        inputTokens: finalMessage.usage.input_tokens,
+        outputTokens: finalMessage.usage.output_tokens,
+        model: AppConfig.api.defaultModel
+      });
+    }
 
     // Process tool use requests
     if (streamHandlers.onToolUse && finalMessage.content) {

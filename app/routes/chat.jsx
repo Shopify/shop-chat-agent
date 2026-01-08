@@ -8,6 +8,15 @@ import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
+import {
+  recordConversationStart,
+  recordMcpConnection,
+  recordToolCall,
+  recordTokenUsage,
+  recordMessage,
+  recordConversationEnd,
+  recordError
+} from "../services/debug.server";
 
 
 /**
@@ -119,6 +128,8 @@ async function handleChatSession({
   promptType,
   stream
 }) {
+  const sessionStartTime = Date.now();
+  
   // Initialize services
   const claudeService = createClaudeService();
   const toolService = createToolService();
@@ -136,6 +147,9 @@ async function handleChatSession({
     mcpApiUrl,
   );
 
+  // Record conversation start for debug
+  recordConversationStart(conversationId, shopDomain);
+
   try {
     // Send conversation ID to client
     stream.sendMessage({ type: 'id', conversation_id: conversationId });
@@ -144,13 +158,23 @@ async function handleChatSession({
     let storefrontMcpTools = [], customerMcpTools = [];
 
     try {
+      const storefrontStart = Date.now();
       storefrontMcpTools = await mcpClient.connectToStorefrontServer();
+      const storefrontLatency = Date.now() - storefrontStart;
+      
+      const customerStart = Date.now();
       customerMcpTools = await mcpClient.connectToCustomerServer();
+      const customerLatency = Date.now() - customerStart;
 
       console.log(`Connected to MCP with ${storefrontMcpTools.length} tools`);
       console.log(`Connected to customer MCP with ${customerMcpTools.length} tools`);
+      
+      // Record MCP connections for debug
+      recordMcpConnection(conversationId, 'storefront', `${shopDomain}/api/mcp`, storefrontMcpTools.length, storefrontLatency);
+      recordMcpConnection(conversationId, 'customer', mcpApiUrl || 'customer-api', customerMcpTools.length, customerLatency);
     } catch (error) {
       console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
+      recordError(conversationId, 'mcp_connection', error.message);
     }
 
     // Prepare conversation state
@@ -159,6 +183,9 @@ async function handleChatSession({
 
     // Save user message to the database
     await saveMessage(conversationId, 'user', userMessage);
+    
+    // Record user message for debug
+    recordMessage(conversationId, 'user', userMessage);
 
     // Fetch all messages from the database for this conversation
     const dbMessages = await getConversationHistory(conversationId);
@@ -236,9 +263,20 @@ async function handleChatSession({
               .catch((error) => {
                 console.error("Error saving message to database:", error);
               });
+            
+            // Record assistant message for debug
+            const contentPreview = Array.isArray(message.content) 
+              ? message.content.find(c => c.type === 'text')?.text || '[tool use]'
+              : message.content;
+            recordMessage(conversationId, message.role, contentPreview);
 
             // Send a completion message
             stream.sendMessage({ type: 'message_complete' });
+          },
+          
+          // Handle token usage tracking
+          onTokenUsage: (usage) => {
+            recordTokenUsage(conversationId, usage.inputTokens, usage.outputTokens);
           },
 
           // Handle tool use requests
@@ -254,11 +292,16 @@ async function handleChatSession({
               tool_use_message: toolUseMessage
             });
 
-            // Call the tool
+            // Call the tool with timing
+            const toolStartTime = Date.now();
             const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
+            const toolLatency = Date.now() - toolStartTime;
 
             // Handle tool response based on success/error
             if (toolUseResponse.error) {
+              // Record tool call failure for debug
+              recordToolCall(conversationId, toolName, toolArgs, toolUseResponse.error, toolLatency, false);
+              
               await toolService.handleToolError(
                 toolUseResponse,
                 toolName,
@@ -268,6 +311,9 @@ async function handleChatSession({
                 conversationId
               );
             } else {
+              // Record tool call success for debug
+              recordToolCall(conversationId, toolName, toolArgs, toolUseResponse, toolLatency, true);
+              
               await toolService.handleToolSuccess(
                 toolUseResponse,
                 toolName,
@@ -305,7 +351,13 @@ async function handleChatSession({
         products: productsToDisplay
       });
     }
+    
+    // Record conversation completion for debug
+    const totalLatency = Date.now() - sessionStartTime;
+    recordConversationEnd(conversationId, totalLatency);
   } catch (error) {
+    // Record error for debug
+    recordError(conversationId, 'chat_session', error.message);
     // The streaming handler takes care of error handling
     throw error;
   }
