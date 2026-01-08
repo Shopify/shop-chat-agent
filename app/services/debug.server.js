@@ -277,8 +277,9 @@ function addEvent(event) {
  * @returns {string} Truncated result
  */
 function truncateResult(result) {
-  const str = typeof result === 'string' ? result : JSON.stringify(result);
-  return str.length > 500 ? str.substring(0, 500) + '...' : str;
+  const str = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+  // Increased limit to 2000 chars for better visibility in debug panel
+  return str.length > 2000 ? str.substring(0, 2000) + '\n... [truncated]' : str;
 }
 
 export default {

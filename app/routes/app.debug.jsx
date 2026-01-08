@@ -30,6 +30,36 @@ export default function DebugDashboard() {
   const revalidator = useRevalidator();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [expandedTools, setExpandedTools] = useState(new Set());
+  const [expandedEvents, setExpandedEvents] = useState(new Set());
+
+  const toggleToolExpanded = (index) => {
+    const newExpanded = new Set(expandedTools);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedTools(newExpanded);
+  };
+
+  const toggleEventExpanded = (id) => {
+    const newExpanded = new Set(expandedEvents);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedEvents(newExpanded);
+  };
+
+  const formatJson = (obj) => {
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return String(obj);
+    }
+  };
 
   // Auto-refresh every 3 seconds
   useEffect(() => {
@@ -259,22 +289,81 @@ export default function DebugDashboard() {
                 <s-card>
                   <s-stack gap="tight">
                     <s-text variant="headingSm">🔧 Tool Calls</s-text>
-                    {selectedConversation.toolCalls.map((tool, i) => (
-                      <div key={i} style={{ padding: '8px', background: tool.success ? '#f0fdf4' : '#fef2f2', borderRadius: '4px', marginBottom: '4px' }}>
-                        <s-stack gap="extraTight">
-                          <s-inline gap="base">
-                            <s-text variant="bodyMd" fontWeight="semibold">{tool.toolName}</s-text>
-                            <s-badge tone={tool.success ? 'success' : 'critical'}>
-                              {tool.success ? 'Success' : 'Failed'}
-                            </s-badge>
-                            <s-text variant="bodySm" tone="subdued">{tool.latencyMs}ms</s-text>
-                          </s-inline>
-                          <s-text variant="bodySm" tone="subdued">
-                            Args: {JSON.stringify(tool.toolArgs).substring(0, 100)}...
-                          </s-text>
-                        </s-stack>
-                      </div>
-                    ))}
+                    {selectedConversation.toolCalls.map((tool, i) => {
+                      const isExpanded = expandedTools.has(i);
+                      return (
+                        <div 
+                          key={i} 
+                          style={{ 
+                            padding: '12px', 
+                            background: tool.success ? '#f0fdf4' : '#fef2f2', 
+                            borderRadius: '8px', 
+                            marginBottom: '8px',
+                            border: `1px solid ${tool.success ? '#86efac' : '#fca5a5'}`
+                          }}
+                        >
+                          <s-stack gap="tight">
+                            {/* Header - always visible */}
+                            <div 
+                              onClick={() => toggleToolExpanded(i)}
+                              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            >
+                              <s-inline gap="base">
+                                <s-text variant="bodyMd" fontWeight="semibold">{tool.toolName}</s-text>
+                                <s-badge tone={tool.success ? 'success' : 'critical'}>
+                                  {tool.success ? '✓ Success' : '✗ Failed'}
+                                </s-badge>
+                                <s-badge tone="info">⏱️ {tool.latencyMs}ms</s-badge>
+                              </s-inline>
+                              <s-text variant="bodySm" tone="subdued">
+                                {isExpanded ? '▼ Collapse' : '▶ Expand'}
+                              </s-text>
+                            </div>
+                            
+                            {/* Expanded details */}
+                            {isExpanded && (
+                              <s-stack gap="tight">
+                                {/* Arguments */}
+                                <div style={{ marginTop: '8px' }}>
+                                  <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📥 Input Arguments:</s-text>
+                                  <pre style={{ 
+                                    background: '#1e293b', 
+                                    color: '#e2e8f0', 
+                                    padding: '12px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    overflow: 'auto',
+                                    maxHeight: '200px',
+                                    marginTop: '4px',
+                                    fontFamily: 'Monaco, Consolas, monospace'
+                                  }}>
+                                    {formatJson(tool.toolArgs)}
+                                  </pre>
+                                </div>
+                                
+                                {/* Result */}
+                                <div>
+                                  <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📤 Result:</s-text>
+                                  <pre style={{ 
+                                    background: '#1e293b', 
+                                    color: '#e2e8f0', 
+                                    padding: '12px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    overflow: 'auto',
+                                    maxHeight: '300px',
+                                    marginTop: '4px',
+                                    fontFamily: 'Monaco, Consolas, monospace'
+                                  }}>
+                                    {tool.result}
+                                  </pre>
+                                </div>
+                              </s-stack>
+                            )}
+                          </s-stack>
+                        </div>
+                      );
+                    })}
                   </s-stack>
                 </s-card>
               )}
@@ -297,38 +386,107 @@ export default function DebugDashboard() {
               {debugData.recentEvents.length === 0 ? (
                 <s-text tone="subdued">Waiting for events...</s-text>
               ) : (
-                debugData.recentEvents.slice(0, 20).map((event) => (
-                  <div 
-                    key={event.id}
-                    style={{ 
-                      padding: '8px 12px',
-                      background: event.type === 'error' ? '#fef2f2' : '#f9fafb',
-                      borderRadius: '4px',
-                      borderLeft: `3px solid ${event.type === 'error' ? '#ef4444' : event.type === 'tool_call' ? '#f59e0b' : '#3b82f6'}`
-                    }}
-                  >
-                    <s-inline gap="base">
-                      <s-text>{getEventIcon(event.type)}</s-text>
-                      <s-text variant="bodySm" fontWeight="medium">{event.type}</s-text>
-                      <s-text variant="bodySm" tone="subdued">{formatTimestamp(event.timestamp)}</s-text>
-                    </s-inline>
-                    {event.type === 'tool_call' && (
-                      <s-text variant="bodySm" tone="subdued">
-                        {event.toolName} - {event.latencyMs}ms
-                      </s-text>
-                    )}
-                    {event.type === 'token_usage' && (
-                      <s-text variant="bodySm" tone="subdued">
-                        +{event.inputTokens} in / +{event.outputTokens} out
-                      </s-text>
-                    )}
-                    {event.type === 'mcp_connection' && (
-                      <s-text variant="bodySm" tone="subdued">
-                        {event.serverType}: {event.toolCount} tools ({event.latencyMs}ms)
-                      </s-text>
-                    )}
-                  </div>
-                ))
+                debugData.recentEvents.slice(0, 20).map((event) => {
+                  const isExpanded = expandedEvents.has(event.id);
+                  const isToolCall = event.type === 'tool_call';
+                  
+                  return (
+                    <div 
+                      key={event.id}
+                      style={{ 
+                        padding: '10px 12px',
+                        background: event.type === 'error' ? '#fef2f2' : '#f9fafb',
+                        borderRadius: '6px',
+                        borderLeft: `4px solid ${event.type === 'error' ? '#ef4444' : event.type === 'tool_call' ? '#f59e0b' : '#3b82f6'}`,
+                        cursor: isToolCall ? 'pointer' : 'default'
+                      }}
+                      onClick={() => isToolCall && toggleEventExpanded(event.id)}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <s-inline gap="base">
+                          <s-text>{getEventIcon(event.type)}</s-text>
+                          <s-text variant="bodySm" fontWeight="medium">{event.type}</s-text>
+                          <s-text variant="bodySm" tone="subdued">{formatTimestamp(event.timestamp)}</s-text>
+                        </s-inline>
+                        {isToolCall && (
+                          <s-text variant="bodySm" tone="subdued">
+                            {isExpanded ? '▼' : '▶'}
+                          </s-text>
+                        )}
+                      </div>
+                      
+                      {event.type === 'tool_call' && (
+                        <div style={{ marginTop: '4px' }}>
+                          <s-inline gap="base">
+                            <s-badge tone="warning">{event.toolName}</s-badge>
+                            <s-badge tone="info">⏱️ {event.latencyMs}ms</s-badge>
+                            <s-badge tone={event.success !== false ? 'success' : 'critical'}>
+                              {event.success !== false ? '✓' : '✗'}
+                            </s-badge>
+                          </s-inline>
+                          
+                          {/* Expanded tool details */}
+                          {isExpanded && (
+                            <div style={{ marginTop: '8px' }}>
+                              <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📥 Arguments:</s-text>
+                              <pre style={{ 
+                                background: '#1e293b', 
+                                color: '#e2e8f0', 
+                                padding: '10px', 
+                                borderRadius: '6px', 
+                                fontSize: '11px',
+                                overflow: 'auto',
+                                maxHeight: '150px',
+                                marginTop: '4px',
+                                fontFamily: 'Monaco, Consolas, monospace'
+                              }}>
+                                {formatJson(event.toolArgs)}
+                              </pre>
+                              {event.resultPreview && (
+                                <>
+                                  <s-text variant="bodySm" fontWeight="semibold" tone="subdued" style={{ marginTop: '8px' }}>📤 Result Preview:</s-text>
+                                  <pre style={{ 
+                                    background: '#1e293b', 
+                                    color: '#e2e8f0', 
+                                    padding: '10px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '11px',
+                                    overflow: 'auto',
+                                    maxHeight: '150px',
+                                    marginTop: '4px',
+                                    fontFamily: 'Monaco, Consolas, monospace'
+                                  }}>
+                                    {event.resultPreview}
+                                  </pre>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {event.type === 'token_usage' && (
+                        <div style={{ marginTop: '4px' }}>
+                          <s-inline gap="tight">
+                            <s-badge tone="info">📥 +{event.inputTokens} input</s-badge>
+                            <s-badge tone="success">📤 +{event.outputTokens} output</s-badge>
+                            <s-badge>📊 {event.totalTokens} total</s-badge>
+                          </s-inline>
+                        </div>
+                      )}
+                      
+                      {event.type === 'mcp_connection' && (
+                        <div style={{ marginTop: '4px' }}>
+                          <s-inline gap="tight">
+                            <s-badge tone="info">{event.serverType}</s-badge>
+                            <s-badge tone="success">{event.toolCount} tools</s-badge>
+                            <s-badge>⏱️ {event.latencyMs}ms</s-badge>
+                          </s-inline>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </s-stack>
           )}
