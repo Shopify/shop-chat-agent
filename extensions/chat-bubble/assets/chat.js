@@ -858,12 +858,13 @@
       bannerElement: null,
 
       /**
-       * Check if customer is logged in and should see connect banner
+       * Check if should show connect banner
        * @returns {boolean}
        */
       shouldShowBanner: function() {
-        // Only show if customer is logged in and not already connected
-        return window.shopCustomer?.loggedIn && !this.isConnected && !sessionStorage.getItem('shopAiAccountConnected');
+        // Always show unless already connected (for demo purposes)
+        // Original check: window.shopCustomer?.loggedIn && !this.isConnected && !sessionStorage.getItem('shopAiAccountConnected')
+        return !this.isConnected && !sessionStorage.getItem('shopAiAccountConnected');
       },
 
       /**
