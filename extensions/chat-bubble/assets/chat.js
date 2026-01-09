@@ -912,10 +912,15 @@
         try {
           const chatApiUrl = window.shopChatConfig?.chatApiUrl;
           const shopId = window.shopId;
+          const shopDomain = window.shopDomain;
           const conversationId = sessionStorage.getItem('shopAiConversationId') || `auth-${Date.now()}`;
 
           if (!chatApiUrl || chatApiUrl.includes('your-tunnel-url')) {
             throw new Error('Chat API URL not configured');
+          }
+
+          if (!shopDomain) {
+            throw new Error('Shop domain not configured');
           }
 
           // Request auth URL from backend
@@ -924,6 +929,7 @@
             method: 'GET',
             headers: {
               'X-Shopify-Shop-Id': shopId,
+              'X-Shopify-Shop-Domain': shopDomain,
               'Accept': 'application/json'
             }
           });

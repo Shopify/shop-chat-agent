@@ -80,11 +80,20 @@ async function handleProactiveAuthRequest(request) {
   const { generateAuthUrl } = await import("../auth.server");
   
   try {
-    // Get shop ID from header
+    // Get shop ID and domain from headers
     const shopId = request.headers.get("X-Shopify-Shop-Id");
+    const shopDomainHeader = request.headers.get("X-Shopify-Shop-Domain");
+    
     if (!shopId) {
       return new Response(
         JSON.stringify({ error: "Shop ID required" }), 
+        { status: 400, headers: getCorsHeaders(request) }
+      );
+    }
+
+    if (!shopDomainHeader) {
+      return new Response(
+        JSON.stringify({ error: "Shop domain required" }), 
         { status: 400, headers: getCorsHeaders(request) }
       );
     }
@@ -97,8 +106,8 @@ async function handleProactiveAuthRequest(request) {
       conversationId = `auth-${Date.now()}`;
     }
 
-    // Get the shop domain from shop ID (use the standard format)
-    const shopDomain = `https://${shopId}.myshopify.com`;
+    // Use the shop domain from the header (e.g., "emea-partner-webinar-demo.myshopify.com")
+    const shopDomain = `https://${shopDomainHeader}`;
     
     // First, ensure we have the customer account URLs
     await getCustomerAccountUrls(shopDomain, conversationId);
