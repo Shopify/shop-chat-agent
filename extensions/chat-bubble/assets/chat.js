@@ -872,7 +872,18 @@
        * @param {HTMLElement} messagesContainer - The messages container
        */
       showBanner: function(messagesContainer) {
-        if (!this.shouldShowBanner()) return;
+        console.log('🔗 ConnectAccount.showBanner called');
+        console.log('  - messagesContainer:', messagesContainer);
+        console.log('  - isConnected:', this.isConnected);
+        console.log('  - sessionStorage:', sessionStorage.getItem('shopAiAccountConnected'));
+        console.log('  - shouldShowBanner:', this.shouldShowBanner());
+        
+        if (!this.shouldShowBanner()) {
+          console.log('  ❌ Banner NOT shown (shouldShowBanner returned false)');
+          return;
+        }
+        
+        console.log('  ✅ Creating banner...');
 
         const banner = document.createElement('div');
         banner.className = 'shop-ai-connect-banner';
@@ -1048,10 +1059,16 @@
      * Initialize the chat application
      */
     init: function() {
+      console.log('🚀 ShopAIChat.init() called');
+      
       // Initialize UI
       const container = document.querySelector('.shop-ai-chat-container');
-      if (!container) return;
-
+      if (!container) {
+        console.log('❌ No .shop-ai-chat-container found');
+        return;
+      }
+      
+      console.log('✅ Container found, initializing UI...');
       this.UI.init(container);
 
       // Check for existing conversation
