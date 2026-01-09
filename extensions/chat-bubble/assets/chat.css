@@ -609,3 +609,123 @@
       transform: scale(1);
     }
   }
+
+  /* Connect Account Banner */
+  .shop-ai-connect-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 0 16px 12px 16px;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+    border: 1px solid #c7d8f8;
+    border-radius: 12px;
+    animation: slideInBanner 0.3s ease-out;
+  }
+
+  @keyframes slideInBanner {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .shop-ai-connect-icon {
+    width: 40px;
+    height: 40px;
+    background: #5046e4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .shop-ai-connect-icon svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+  }
+
+  .shop-ai-connect-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .shop-ai-connect-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 2px 0;
+  }
+
+  .shop-ai-connect-subtitle {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+  }
+
+  .shop-ai-connect-btn {
+    background: #5046e4;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .shop-ai-connect-btn:hover {
+    background: #3f36c0;
+  }
+
+  .shop-ai-connect-btn:active {
+    transform: scale(0.98);
+  }
+
+  .shop-ai-connect-btn:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+
+  .shop-ai-connect-btn.loading {
+    pointer-events: none;
+  }
+
+  .shop-ai-connect-banner.connected {
+    background: linear-gradient(135deg, #e8f8f0 0%, #d4f0e4 100%);
+    border-color: #a8d8c4;
+  }
+
+  .shop-ai-connect-banner.connected .shop-ai-connect-icon {
+    background: #22c55e;
+  }
+
+  .shop-ai-connect-banner.connected .shop-ai-connect-btn {
+    background: #22c55e;
+  }
+
+  @media (max-width: 480px) {
+    .shop-ai-connect-banner {
+      margin: 0 10px 10px 10px;
+      padding: 10px 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .shop-ai-connect-content {
+      flex: 1 1 60%;
+    }
+
+    .shop-ai-connect-btn {
+      width: 100%;
+      margin-top: 4px;
+    }
+  }

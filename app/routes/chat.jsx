@@ -38,6 +38,11 @@ export async function loader({ request }) {
     return handleHistoryRequest(request, url.searchParams.get('conversation_id'));
   }
 
+  // Handle proactive auth URL request - matches /chat?auth=true
+  if (url.searchParams.has('auth')) {
+    return handleProactiveAuthRequest(request);
+  }
+
   // Handle SSE requests
   if (!url.searchParams.has('history') && request.headers.get("Accept") === "text/event-stream") {
     return handleChatRequest(request);
@@ -64,6 +69,57 @@ async function handleHistoryRequest(request, conversationId) {
   const messages = await getConversationHistory(conversationId);
 
   return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request) });
+}
+
+/**
+ * Handle proactive auth requests for the "Connect Account" button
+ * @param {Request} request - The request object
+ * @returns {Response} JSON response with auth URL
+ */
+async function handleProactiveAuthRequest(request) {
+  const { generateAuthUrl } = await import("../auth.server");
+  
+  try {
+    // Get shop ID from header
+    const shopId = request.headers.get("X-Shopify-Shop-Id");
+    if (!shopId) {
+      return new Response(
+        JSON.stringify({ error: "Shop ID required" }), 
+        { status: 400, headers: getCorsHeaders(request) }
+      );
+    }
+
+    // Generate or get conversation ID
+    const url = new URL(request.url);
+    let conversationId = url.searchParams.get('conversation_id');
+    
+    if (!conversationId) {
+      conversationId = `auth-${Date.now()}`;
+    }
+
+    // Get the shop domain from shop ID (use the standard format)
+    const shopDomain = `https://${shopId}.myshopify.com`;
+    
+    // First, ensure we have the customer account URLs
+    await getCustomerAccountUrls(shopDomain, conversationId);
+
+    // Now generate the auth URL
+    const authResponse = await generateAuthUrl(conversationId, shopId);
+
+    return new Response(
+      JSON.stringify({ 
+        authUrl: authResponse.url, 
+        conversationId: conversationId 
+      }), 
+      { headers: { ...getCorsHeaders(request), "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error generating proactive auth URL:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to generate auth URL", details: error.message }), 
+      { status: 500, headers: getCorsHeaders(request) }
+    );
+  }
 }
 
 /**

@@ -675,6 +675,9 @@
           `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
         );
 
+        // Store popup reference globally for tracking
+        window.shopAuthPopup = popup;
+
         // Focus the popup window
         if (popup) {
           popup.focus();
@@ -848,6 +851,167 @@
     },
 
     /**
+     * Connect Account - Proactive authentication for customer data access
+     */
+    ConnectAccount: {
+      isConnected: false,
+      bannerElement: null,
+
+      /**
+       * Check if customer is logged in and should see connect banner
+       * @returns {boolean}
+       */
+      shouldShowBanner: function() {
+        // Only show if customer is logged in and not already connected
+        return window.shopCustomer?.loggedIn && !this.isConnected && !sessionStorage.getItem('shopAiAccountConnected');
+      },
+
+      /**
+       * Create and insert the connect account banner
+       * @param {HTMLElement} messagesContainer - The messages container
+       */
+      showBanner: function(messagesContainer) {
+        if (!this.shouldShowBanner()) return;
+
+        const banner = document.createElement('div');
+        banner.className = 'shop-ai-connect-banner';
+        banner.innerHTML = `
+          <div class="shop-ai-connect-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="shop-ai-connect-content">
+            <p class="shop-ai-connect-title">Connect your account</p>
+            <p class="shop-ai-connect-subtitle">View orders, track shipments & get personalized help</p>
+          </div>
+          <button class="shop-ai-connect-btn" id="shop-ai-connect-btn">Connect</button>
+        `;
+
+        // Insert at the top of messages
+        messagesContainer.insertBefore(banner, messagesContainer.firstChild);
+        this.bannerElement = banner;
+
+        // Add click handler for connect button
+        const connectBtn = banner.querySelector('#shop-ai-connect-btn');
+        connectBtn.addEventListener('click', () => this.initiateConnection());
+      },
+
+      /**
+       * Initiate the OAuth connection flow
+       */
+      initiateConnection: async function() {
+        const connectBtn = this.bannerElement?.querySelector('#shop-ai-connect-btn');
+        if (connectBtn) {
+          connectBtn.textContent = 'Connecting...';
+          connectBtn.classList.add('loading');
+          connectBtn.disabled = true;
+        }
+
+        try {
+          const chatApiUrl = window.shopChatConfig?.chatApiUrl;
+          const shopId = window.shopId;
+          const conversationId = sessionStorage.getItem('shopAiConversationId') || `auth-${Date.now()}`;
+
+          if (!chatApiUrl || chatApiUrl.includes('your-tunnel-url')) {
+            throw new Error('Chat API URL not configured');
+          }
+
+          // Request auth URL from backend
+          const authUrl = `${chatApiUrl}?auth=true&conversation_id=${conversationId}`;
+          const response = await fetch(authUrl, {
+            method: 'GET',
+            headers: {
+              'X-Shopify-Shop-Id': shopId,
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to get auth URL');
+          }
+
+          const data = await response.json();
+          
+          if (data.authUrl) {
+            // Store the conversation ID for later
+            sessionStorage.setItem('shopAiConversationId', data.conversationId);
+            
+            // Open auth popup
+            ShopAIChat.Auth.openAuthPopup(data.authUrl);
+            
+            // Listen for auth completion
+            this.listenForAuthComplete();
+          } else {
+            throw new Error('No auth URL received');
+          }
+        } catch (error) {
+          console.error('Connect account error:', error);
+          if (connectBtn) {
+            connectBtn.textContent = 'Try Again';
+            connectBtn.classList.remove('loading');
+            connectBtn.disabled = false;
+          }
+        }
+      },
+
+      /**
+       * Listen for auth completion (popup closes)
+       */
+      listenForAuthComplete: function() {
+        // Check periodically if auth completed (popup closed means auth done)
+        const checkInterval = setInterval(() => {
+          // When popup closes, assume auth completed successfully
+          // The actual token exchange happens server-side
+          if (!window.shopAuthPopup || window.shopAuthPopup.closed) {
+            clearInterval(checkInterval);
+            this.handleAuthComplete();
+          }
+        }, 500);
+
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          clearInterval(checkInterval);
+        }, 300000);
+      },
+
+      /**
+       * Handle successful authentication
+       */
+      handleAuthComplete: function() {
+        this.isConnected = true;
+        sessionStorage.setItem('shopAiAccountConnected', 'true');
+
+        if (this.bannerElement) {
+          this.bannerElement.classList.add('connected');
+          const title = this.bannerElement.querySelector('.shop-ai-connect-title');
+          const subtitle = this.bannerElement.querySelector('.shop-ai-connect-subtitle');
+          const btn = this.bannerElement.querySelector('.shop-ai-connect-btn');
+
+          if (title) title.textContent = 'Account connected!';
+          if (subtitle) subtitle.textContent = 'You can now ask about your orders and account';
+          if (btn) {
+            btn.textContent = '✓ Connected';
+            btn.disabled = true;
+          }
+
+          // Auto-hide banner after 3 seconds
+          setTimeout(() => {
+            if (this.bannerElement) {
+              this.bannerElement.style.opacity = '0';
+              this.bannerElement.style.transform = 'translateY(-10px)';
+              this.bannerElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              setTimeout(() => {
+                this.bannerElement?.remove();
+              }, 300);
+            }
+          }, 3000);
+        }
+      }
+    },
+
+    /**
      * Initialize the chat application
      */
     init: function() {
@@ -868,6 +1032,9 @@
         const welcomeMessage = window.shopChatConfig?.welcomeMessage || "👋 Hi there! How can I help you today?";
         this.Message.add(welcomeMessage, 'assistant', this.UI.elements.messagesContainer);
       }
+
+      // Show connect account banner if customer is logged in
+      this.ConnectAccount.showBanner(this.UI.elements.messagesContainer);
     }
   };
 
