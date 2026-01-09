@@ -334,26 +334,30 @@ export default function DebugDashboard() {
                   <s-badge tone="warning">{modelInfo.name}</s-badge>
                   <s-text variant="bodySm" tone="subdued">Max {modelInfo.maxTokens} tokens/response</s-text>
                   
-                  <div style={{ marginTop: '8px', padding: '12px', background: '#fffbeb', borderRadius: '8px' }}>
-                    <s-text variant="bodySm" fontWeight="semibold">What Claude does:</s-text>
-                    <ul style={{ margin: '8px 0 0 16px', fontSize: '13px', color: '#78716c' }}>
-                      <li>✅ Understands natural language</li>
-                      <li>✅ Reasons about customer intent</li>
-                      <li>✅ Decides WHICH tool to use</li>
-                      <li>✅ Crafts the tool arguments</li>
-                      <li>✅ Interprets results for customer</li>
-                      <li>✅ Generates conversational response</li>
-                    </ul>
-                  </div>
+                  <s-box padding="base" background="subdued" borderRadius="base">
+                    <s-stack gap="tight">
+                      <s-text variant="bodySm" fontWeight="semibold">What Claude does:</s-text>
+                      <s-unordered-list>
+                        <li>✅ Understands natural language</li>
+                        <li>✅ Reasons about customer intent</li>
+                        <li>✅ Decides WHICH tool to use</li>
+                        <li>✅ Crafts the tool arguments</li>
+                        <li>✅ Interprets results for customer</li>
+                        <li>✅ Generates conversational response</li>
+                      </s-unordered-list>
+                    </s-stack>
+                  </s-box>
                   
-                  <div style={{ padding: '12px', background: '#fef2f2', borderRadius: '8px' }}>
-                    <s-text variant="bodySm" fontWeight="semibold">What Claude does NOT do:</s-text>
-                    <ul style={{ margin: '8px 0 0 16px', fontSize: '13px', color: '#78716c' }}>
-                      <li>❌ Access store data directly</li>
-                      <li>❌ Execute API calls</li>
-                      <li>❌ Modify cart/checkout</li>
-                    </ul>
-                  </div>
+                  <s-box padding="base" background="subdued" borderRadius="base" borderColor="subdued" borderWidth="small">
+                    <s-stack gap="tight">
+                      <s-text variant="bodySm" fontWeight="semibold" tone="critical">What Claude does NOT do:</s-text>
+                      <s-unordered-list>
+                        <li>❌ Access store data directly</li>
+                        <li>❌ Execute API calls</li>
+                        <li>❌ Modify cart/checkout</li>
+                      </s-unordered-list>
+                    </s-stack>
+                  </s-box>
                 </s-stack>
               </s-card>
 
@@ -367,28 +371,32 @@ export default function DebugDashboard() {
                   <s-badge tone="success">Model Context Protocol</s-badge>
                   <s-text variant="bodySm" tone="subdued">Secure API bridge</s-text>
                   
-                  <div style={{ marginTop: '8px', padding: '12px', background: '#ecfdf5', borderRadius: '8px' }}>
-                    <s-text variant="bodySm" fontWeight="semibold">What MCP does:</s-text>
-                    <ul style={{ margin: '8px 0 0 16px', fontSize: '13px', color: '#78716c' }}>
-                      <li>✅ Provides available tools to LLM</li>
-                      <li>✅ Executes Shopify API calls</li>
-                      <li>✅ Searches product catalog</li>
-                      <li>✅ Manages shopping cart</li>
-                      <li>✅ Returns structured data</li>
-                      <li>✅ Handles authentication</li>
-                    </ul>
-                  </div>
+                  <s-box padding="base" background="subdued" borderRadius="base">
+                    <s-stack gap="tight">
+                      <s-text variant="bodySm" fontWeight="semibold">What MCP does:</s-text>
+                      <s-unordered-list>
+                        <li>✅ Provides available tools to LLM</li>
+                        <li>✅ Executes Shopify API calls</li>
+                        <li>✅ Searches product catalog</li>
+                        <li>✅ Manages shopping cart</li>
+                        <li>✅ Returns structured data</li>
+                        <li>✅ Handles authentication</li>
+                      </s-unordered-list>
+                    </s-stack>
+                  </s-box>
                   
-                  <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
-                    <s-text variant="bodySm" fontWeight="semibold">Available Tools:</s-text>
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      <s-badge>search_shop_catalog</s-badge>
-                      <s-badge>get_product_details</s-badge>
-                      <s-badge>update_cart</s-badge>
-                      <s-badge>get_cart</s-badge>
-                      <s-badge>get_shop_info</s-badge>
-                    </div>
-                  </div>
+                  <s-box padding="base" background="subdued" borderRadius="base" borderColor="base" borderWidth="small">
+                    <s-stack gap="tight">
+                      <s-text variant="bodySm" fontWeight="semibold" tone="success">Available Tools:</s-text>
+                      <s-inline gap="small">
+                        <s-badge>search_shop_catalog</s-badge>
+                        <s-badge>get_product_details</s-badge>
+                        <s-badge>update_cart</s-badge>
+                        <s-badge>get_cart</s-badge>
+                        <s-badge>get_shop_info</s-badge>
+                      </s-inline>
+                    </s-stack>
+                  </s-box>
                 </s-stack>
               </s-card>
             </s-inline>
@@ -571,37 +579,37 @@ export default function DebugDashboard() {
                           
                           {/* Content */}
                           <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <s-inline gap="small" blockAlign="center">
                               <span>{actorStyle.icon}</span>
                               <s-text variant="bodySm" fontWeight="bold">{step.actor}</s-text>
-                              <span style={{ color: '#9ca3af' }}>→</span>
+                              <s-text variant="bodySm" tone="subdued">→</s-text>
                               <span>{targetStyle.icon}</span>
                               <s-text variant="bodySm" fontWeight="bold">{step.target}</s-text>
                               {step.latency && (
                                 <s-badge tone="info">⏱️ {step.latency}ms</s-badge>
                               )}
                               {step.expandable && (
-                                <s-text variant="bodySm" tone="subdued" style={{ marginLeft: 'auto' }}>
+                                <s-text variant="bodySm" tone="subdued">
                                   {isExpanded ? '▼ Collapse' : '▶ Expand'}
                                 </s-text>
                               )}
-                            </div>
+                            </s-inline>
                             <div style={{ marginBottom: '4px' }}>
                               <s-text variant="bodySm" fontWeight="medium" style={{ fontStyle: 'italic' }}>{step.action}</s-text>
                             </div>
                             
                             {/* MCP Connection - show tool count and names */}
                             {step.type === 'mcp_connect' && (
-                              <div style={{ marginTop: '6px' }}>
+                              <s-stack gap="tight">
                                 <s-badge tone="success">{step.toolCount} tools available</s-badge>
                                 {step.toolNames && step.toolNames.length > 0 && (
-                                  <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  <s-inline gap="small">
                                     {step.toolNames.map((name, i) => (
-                                      <s-badge key={i} tone="info" style={{ fontSize: '10px' }}>{name}</s-badge>
+                                      <s-badge key={i} tone="info">{name}</s-badge>
                                     ))}
-                                  </div>
+                                  </s-inline>
                                 )}
-                              </div>
+                              </s-stack>
                             )}
                             
                             {/* LLM Decision (tool invocation) - show args */}
@@ -618,24 +626,22 @@ export default function DebugDashboard() {
                                   </s-text>
                                 )}
                                 {isExpanded && (
-                                  <div style={{ marginTop: '8px' }}>
+                                  <s-stack gap="tight">
                                     <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📥 Full Arguments:</s-text>
-                                    <pre style={{ 
-                                      background: '#1e293b', 
-                                      color: '#e2e8f0', 
-                                      padding: '12px', 
-                                      borderRadius: '6px', 
-                                      fontSize: '11px',
-                                      overflow: 'auto',
-                                      maxHeight: '250px',
-                                      marginTop: '4px',
-                                      fontFamily: 'Monaco, Consolas, monospace',
-                                      whiteSpace: 'pre-wrap',
-                                      wordBreak: 'break-word'
-                                    }}>
-                                      {formatJson(step.toolArgs)}
-                                    </pre>
-                                  </div>
+                                    <s-box background="strong" padding="base" borderRadius="base" overflow="hidden">
+                                      <pre style={{ 
+                                        margin: 0,
+                                        fontSize: '11px',
+                                        overflow: 'auto',
+                                        maxHeight: '250px',
+                                        fontFamily: 'Monaco, Consolas, monospace',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word'
+                                      }}>
+                                        {formatJson(step.toolArgs)}
+                                      </pre>
+                                    </s-box>
+                                  </s-stack>
                                 )}
                               </div>
                             )}
@@ -658,24 +664,22 @@ export default function DebugDashboard() {
                                   </s-text>
                                 )}
                                 {isExpanded && step.result && (
-                                  <div style={{ marginTop: '8px' }}>
+                                  <s-stack gap="tight">
                                     <s-text variant="bodySm" fontWeight="semibold" tone="subdued">📤 Full Result:</s-text>
-                                    <pre style={{ 
-                                      background: '#1e293b', 
-                                      color: '#e2e8f0', 
-                                      padding: '12px', 
-                                      borderRadius: '6px', 
-                                      fontSize: '11px',
-                                      overflow: 'auto',
-                                      maxHeight: '300px',
-                                      marginTop: '4px',
-                                      fontFamily: 'Monaco, Consolas, monospace',
-                                      whiteSpace: 'pre-wrap',
-                                      wordBreak: 'break-word'
-                                    }}>
-                                      {step.result}
-                                    </pre>
-                                  </div>
+                                    <s-box background="strong" padding="base" borderRadius="base" overflow="hidden">
+                                      <pre style={{ 
+                                        margin: 0,
+                                        fontSize: '11px',
+                                        overflow: 'auto',
+                                        maxHeight: '300px',
+                                        fontFamily: 'Monaco, Consolas, monospace',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word'
+                                      }}>
+                                        {step.result}
+                                      </pre>
+                                    </s-box>
+                                  </s-stack>
                                 )}
                               </div>
                             )}
