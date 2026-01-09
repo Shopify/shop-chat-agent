@@ -967,12 +967,17 @@
        */
       listenForAuthComplete: function() {
         // Check periodically if auth completed (popup closed means auth done)
+        // Listen for postMessage from popup indicating success
+        window.addEventListener('message', this.handleAuthMessage.bind(this), { once: true });
+
         const checkInterval = setInterval(() => {
-          // When popup closes, assume auth completed successfully
-          // The actual token exchange happens server-side
+          // When popup closes, reset button if not connected
           if (!window.shopAuthPopup || window.shopAuthPopup.closed) {
             clearInterval(checkInterval);
-            this.handleAuthComplete();
+            // Only reset button if not already connected
+            if (!this.isConnected) {
+              this.resetConnectButton();
+            }
           }
         }, 500);
 
@@ -980,6 +985,27 @@
         setTimeout(() => {
           clearInterval(checkInterval);
         }, 300000);
+      },
+
+      /**
+       * Handle auth completion message from popup or callback
+       */
+      handleAuthMessage: function(event) {
+        if (event.data?.type === 'shopify-customer-auth-complete' && event.data?.success) {
+          this.handleAuthComplete();
+        }
+      },
+
+      /**
+       * Reset connect button after failed/cancelled auth
+       */
+      resetConnectButton: function() {
+        const connectBtn = this.bannerElement?.querySelector('#shop-ai-connect-btn');
+        if (connectBtn) {
+          connectBtn.textContent = 'Connect';
+          connectBtn.classList.remove('loading');
+          connectBtn.disabled = false;
+        }
       },
 
       /**

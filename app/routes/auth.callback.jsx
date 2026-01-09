@@ -44,6 +44,10 @@ export async function loader({ request }) {
         <title>Authentication Successful</title>
         <script>
           window.onload = function() {
+            // Notify parent window of successful auth
+            if (window.opener) {
+              window.opener.postMessage({ type: 'shopify-customer-auth-complete', success: true }, '*');
+            }
             // Show success message briefly before closing
             document.getElementById('message').style.display = 'block';
             // Close the tab after a short delay
