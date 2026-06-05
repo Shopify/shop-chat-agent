@@ -41,7 +41,7 @@ export function createToolService() {
    */
   const handleToolSuccess = async (toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId) => {
     // Check if this is a product search result
-    if (toolName === AppConfig.tools.productSearchName) {
+    if (AppConfig.tools.productSearchNames.includes(toolName)) {
       productsToDisplay.push(...processProductSearchResult(toolUseResponse));
     }
 
@@ -94,18 +94,22 @@ export function createToolService() {
    * @returns {Object} Formatted product data
    */
   const formatProductData = (product) => {
-    const price = product.price_range
-      ? `${product.price_range.currency} ${product.price_range.min}`
-      : (product.variants && product.variants.length > 0
-        ? `${product.variants[0].currency} ${product.variants[0].price}`
-        : 'Price not available');
+    const minPrice = product.price_range?.min;
+    const variantPrice = product.variants?.[0]?.price;
+    const price = minPrice
+      ? (typeof minPrice === 'object'
+        ? `${minPrice.currency} ${(minPrice.amount / 100).toFixed(2)}`
+        : `${product.price_range.currency} ${minPrice}`)
+      : variantPrice
+        ? `${variantPrice.currency} ${(variantPrice.amount / 100).toFixed(2)}`
+        : 'Price not available';
 
     return {
-      id: product.product_id || `product-${Math.random().toString(36).substring(7)}`,
+      id: product.product_id || product.id || `product-${Math.random().toString(36).substring(7)}`,
       title: product.title || 'Product',
       price: price,
-      image_url: product.image_url || '',
-      description: product.description || '',
+      image_url: product.image_url || product.media?.[0]?.url || '',
+      description: typeof product.description === 'string' ? product.description : (product.description?.html || ''),
       url: product.url || ''
     };
   };
