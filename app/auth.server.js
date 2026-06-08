@@ -7,6 +7,22 @@
  * @param {string} conversationId - The conversation ID to track the auth flow
  * @returns {Promise<Object>} - Object containing the auth URL and conversation ID
  */
+export function encodeOAuthState(conversationId, shopId) {
+  return `${conversationId}:${shopId}`;
+}
+
+export function decodeOAuthState(state) {
+  if (!state) return { conversationId: null, shopId: null };
+
+  const separatorIndex = state.lastIndexOf(":");
+  if (separatorIndex === -1) return { conversationId: null, shopId: null };
+
+  return {
+    conversationId: state.slice(0, separatorIndex),
+    shopId: state.slice(separatorIndex + 1)
+  };
+}
+
 export async function generateAuthUrl(conversationId, shopId) {
   const { storeCodeVerifier } = await import('./db.server');
 
@@ -19,18 +35,14 @@ export async function generateAuthUrl(conversationId, shopId) {
   const redirectUri = process.env.REDIRECT_URL;
 
   // Include the conversation ID and shop ID in the state parameter for tracking
-  const state = `${conversationId}-${shopId}`;
+  const state = encodeOAuthState(conversationId, shopId);
 
   // Generate code verifier and challenge
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
 
   // Store the code verifier in the database
-  try {
-    await storeCodeVerifier(state, verifier);
-  } catch (error) {
-    console.error('Failed to store code verifier:', error);
-  }
+  await storeCodeVerifier(state, verifier);
 
   // Set code_challenge and code_challenge_method parameters
   const codeChallengeMethod = "S256";
@@ -42,7 +54,7 @@ export async function generateAuthUrl(conversationId, shopId) {
 
 
   // Construct the authorization URL with hardcoded shop ID
-  const authUrl = `${baseAuthUrl}?client_id=${clientId}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&state=${state}&code_challenge=${challenge}&code_challenge_method=${codeChallengeMethod}`;
+  const authUrl = `${baseAuthUrl}?client_id=${clientId}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&state=${encodeURIComponent(state)}&code_challenge=${challenge}&code_challenge_method=${codeChallengeMethod}`;
 
   return {
     url: authUrl,

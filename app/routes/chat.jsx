@@ -3,11 +3,12 @@
  * Handles chat interactions with Claude API and tools
  */
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
+import { saveMessage, getConversation, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
+import { conversationBelongsToShop } from "../services/conversation-access.server";
 
 
 /**
@@ -42,6 +43,13 @@ export async function loader({ request }) {
  * React Router action function for handling POST requests
  */
 export async function action({ request }) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: getCorsHeaders(request)
+    });
+  }
+
   return handleChatRequest(request);
 }
 
@@ -52,6 +60,26 @@ export async function action({ request }) {
  * @returns {Response} JSON response with chat history
  */
 async function handleHistoryRequest(request, conversationId) {
+  const shopId = request.headers.get("X-Shopify-Shop-Id");
+
+  if (!shopId) {
+    return new Response(
+      JSON.stringify({ error: AppConfig.errorMessages.missingShopIdentifier }),
+      { status: 400, headers: getCorsHeaders(request) }
+    );
+  }
+
+  const conversation = await getConversation(conversationId);
+
+  // The shop header is client-provided, so this is defense-in-depth; the primary
+  // protection is that conversation IDs are server-created and unguessable.
+  if (!conversationBelongsToShop(conversation, shopId)) {
+    return new Response(
+      JSON.stringify({ error: AppConfig.errorMessages.conversationNotFound }),
+      { status: 404, headers: getCorsHeaders(request) }
+    );
+  }
+
   const messages = await getConversationHistory(conversationId);
 
   return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request) });
@@ -64,6 +92,14 @@ async function handleHistoryRequest(request, conversationId) {
  */
 async function handleChatRequest(request) {
   try {
+    const shopId = request.headers.get("X-Shopify-Shop-Id");
+    if (!shopId) {
+      return new Response(
+        JSON.stringify({ error: AppConfig.errorMessages.missingShopIdentifier }),
+        { status: 400, headers: getSseHeaders(request) }
+      );
+    }
+
     // Get message data from request body
     const body = await request.json();
     const userMessage = body.message;
@@ -76,8 +112,21 @@ async function handleChatRequest(request) {
       );
     }
 
-    // Generate or use existing conversation ID
-    const conversationId = body.conversation_id || Date.now().toString();
+    // Continue an existing conversation only if it belongs to this shop; otherwise
+    // start a fresh one with an unguessable ID so conversations can't be enumerated.
+    let conversationId = body.conversation_id;
+    if (conversationId) {
+      const conversation = await getConversation(conversationId);
+      if (!conversationBelongsToShop(conversation, shopId)) {
+        return new Response(
+          JSON.stringify({ error: AppConfig.errorMessages.conversationNotFound }),
+          { status: 404, headers: getSseHeaders(request) }
+        );
+      }
+    } else {
+      conversationId = crypto.randomUUID();
+    }
+
     const promptType = body.prompt_type || AppConfig.api.defaultPromptType;
 
     // Create a stream for the response
@@ -157,7 +206,7 @@ async function handleChatSession({
     let productsToDisplay = [];
 
     // Save user message to the database
-    await saveMessage(conversationId, 'user', userMessage);
+    await saveMessage(conversationId, 'user', userMessage, shopId);
 
     // Fetch all messages from the database for this conversation
     const dbMessages = await getConversationHistory(conversationId);
@@ -202,7 +251,7 @@ async function handleChatSession({
               content: message.content
             });
 
-            saveMessage(conversationId, message.role, JSON.stringify(message.content))
+            saveMessage(conversationId, message.role, JSON.stringify(message.content), shopId)
               .catch((error) => {
                 console.error("Error saving message to database:", error);
               });
@@ -235,7 +284,8 @@ async function handleChatSession({
                 toolUseId,
                 conversationHistory,
                 stream.sendMessage,
-                conversationId
+                conversationId,
+                shopId
               );
             } else {
               await toolService.handleToolSuccess(
@@ -244,7 +294,8 @@ async function handleChatSession({
                 toolUseId,
                 conversationHistory,
                 productsToDisplay,
-                conversationId
+                conversationId,
+                shopId
               );
             }
 

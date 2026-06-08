@@ -135,17 +135,42 @@ export async function getCustomerToken(conversationId) {
 }
 
 /**
+ * Look up a conversation by ID
+ * @param {string} conversationId - The conversation ID
+ * @returns {Promise<Object|null>} - The conversation or null if not found
+ */
+export async function getConversation(conversationId) {
+  try {
+    return await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+  } catch (error) {
+    console.error('Error retrieving conversation:', error);
+    return null;
+  }
+}
+
+/**
  * Create or update a conversation in the database
  * @param {string} conversationId - The conversation ID
+ * @param {string} shopId - The shop the conversation belongs to
  * @returns {Promise<Object>} - The created or updated conversation
  */
-export async function createOrUpdateConversation(conversationId) {
+export async function createOrUpdateConversation(conversationId, shopId) {
   try {
+    if (!shopId) {
+      throw new Error("Cannot save a conversation without a shop ID");
+    }
+
     const existingConversation = await prisma.conversation.findUnique({
       where: { id: conversationId }
     });
 
     if (existingConversation) {
+      if (existingConversation.shopId !== shopId) {
+        throw new Error("Cannot save a message to a conversation from another shop");
+      }
+
       return await prisma.conversation.update({
         where: { id: conversationId },
         data: {
@@ -156,7 +181,8 @@ export async function createOrUpdateConversation(conversationId) {
 
     return await prisma.conversation.create({
       data: {
-        id: conversationId
+        id: conversationId,
+        shopId
       }
     });
   } catch (error) {
@@ -170,12 +196,13 @@ export async function createOrUpdateConversation(conversationId) {
  * @param {string} conversationId - The conversation ID
  * @param {string} role - The message role (user or assistant)
  * @param {string} content - The message content
+ * @param {string} shopId - The shop the conversation belongs to
  * @returns {Promise<Object>} - The saved message
  */
-export async function saveMessage(conversationId, role, content) {
+export async function saveMessage(conversationId, role, content, shopId) {
   try {
     // Ensure the conversation exists
-    await createOrUpdateConversation(conversationId);
+    await createOrUpdateConversation(conversationId, shopId);
 
     // Create the message
     return await prisma.message.create({

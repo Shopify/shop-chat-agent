@@ -637,7 +637,8 @@
             method: 'GET',
             headers: {
               'Accept': 'application/json',
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'X-Shopify-Shop-Id': window.shopId
             },
             mode: 'cors'
           });

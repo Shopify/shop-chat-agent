@@ -55,9 +55,12 @@ model CodeVerifier {
 
 model Conversation {
   id        String    @id
+  shopId    String?
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([shopId])
 }
 
 model Message {

@@ -1,4 +1,5 @@
 import { getCodeVerifier, storeCustomerToken, getCustomerAccountUrls } from "../db.server";
+import { decodeOAuthState } from "../auth.server";
 
 /**
  * Handle OAuth callback from Shopify Customer API
@@ -7,10 +8,14 @@ export async function loader({ request }) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const [conversationId, shopId] = state.split("-");
+  const { conversationId, shopId } = decodeOAuthState(state);
 
   if (!code) {
     return new Response(JSON.stringify({ error: "Authorization code is missing" }), { status: 400 });
+  }
+
+  if (!conversationId || !shopId) {
+    return new Response(JSON.stringify({ error: "Authorization state is invalid" }), { status: 400 });
   }
 
   try {
@@ -91,9 +96,9 @@ export async function loader({ request }) {
  */
 async function exchangeCodeForToken(code, state) {
   const clientId = process.env.SHOPIFY_API_KEY;
-  const [conversationId, shopId] = state.split("-");
-  if (!clientId || !shopId) {
-    throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
+  const { conversationId, shopId } = decodeOAuthState(state);
+  if (!clientId || !conversationId || !shopId) {
+    throw new Error("SHOPIFY_CLIENT_ID and a valid authorization state are required");
   }
 
   const redirectUri = process.env.REDIRECT_URL;
@@ -109,15 +114,14 @@ async function exchangeCodeForToken(code, state) {
   let codeVerifier = "";
   try {
     const verifierRecord = await getCodeVerifier(state);
-    if (verifierRecord) {
-      codeVerifier = verifierRecord.verifier;
-    } else {
-      console.warn("Code verifier not found for state:", state);
-      // Proceed anyway, since we might be using an older flow without PKCE
+    if (!verifierRecord) {
+      throw new Error("Code verifier not found");
     }
+
+    codeVerifier = verifierRecord.verifier;
   } catch (error) {
     console.error("Error retrieving code verifier:", error);
-    // Proceed anyway and attempt the token exchange
+    throw error;
   }
 
   const requestBody = {

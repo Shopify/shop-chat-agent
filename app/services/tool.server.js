@@ -18,15 +18,16 @@ export function createToolService() {
    * @param {Array} conversationHistory - The conversation history
    * @param {Function} sendMessage - Function to send messages to the client
    * @param {string} conversationId - The conversation ID
+   * @param {string} shopId - The shop the conversation belongs to
    */
-  const handleToolError = async (toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversationId) => {
+  const handleToolError = async (toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversationId, shopId) => {
     if (toolUseResponse.error.type === "auth_required") {
       console.log("Auth required for tool:", toolName);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
+      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId, shopId);
       sendMessage({ type: 'auth_required' });
     } else {
       console.log("Tool use error", toolUseResponse.error);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
+      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId, shopId);
     }
   };
 
@@ -38,14 +39,15 @@ export function createToolService() {
    * @param {Array} conversationHistory - The conversation history
    * @param {Array} productsToDisplay - Array to add product results to
    * @param {string} conversationId - The conversation ID
+   * @param {string} shopId - The shop the conversation belongs to
    */
-  const handleToolSuccess = async (toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId) => {
+  const handleToolSuccess = async (toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId, shopId) => {
     // Check if this is a product search result
     if (toolName === AppConfig.tools.productSearchName) {
       productsToDisplay.push(...processProductSearchResult(toolUseResponse));
     }
 
-    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.content, conversationId);
+    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.content, conversationId, shopId);
   };
 
   /**
@@ -116,8 +118,9 @@ export function createToolService() {
    * @param {string} toolUseId - The ID of the tool use request
    * @param {string} content - The content of the tool result
    * @param {string} conversationId - The conversation ID
+   * @param {string} shopId - The shop the conversation belongs to
    */
-  const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId) => {
+  const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId, shopId) => {
     const toolResultMessage = {
       role: 'user',
       content: [{
@@ -133,7 +136,7 @@ export function createToolService() {
     // Save to database with special format to indicate tool result
     if (conversationId) {
       try {
-        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content));
+        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content), shopId);
       } catch (error) {
         console.error('Error saving tool result to database:', error);
       }
