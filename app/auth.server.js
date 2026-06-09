@@ -8,19 +8,27 @@
  * @returns {Promise<Object>} - Object containing the auth URL and conversation ID
  */
 export function encodeOAuthState(conversationId, shopId) {
-  return `${conversationId}:${shopId}`;
+  return `${conversationId}:${shopId}:${crypto.randomUUID()}`;
 }
 
 export function decodeOAuthState(state) {
   if (!state) return { conversationId: null, shopId: null };
 
-  const separatorIndex = state.lastIndexOf(":");
-  if (separatorIndex === -1) return { conversationId: null, shopId: null };
+  const parts = state.split(":");
+  if (parts.length >= 2 && parts[0] && /^\d+$/.test(parts[1])) {
+    return { conversationId: parts[0], shopId: parts[1] };
+  }
 
-  return {
-    conversationId: state.slice(0, separatorIndex),
-    shopId: state.slice(separatorIndex + 1)
-  };
+  const legacySeparatorIndex = state.lastIndexOf("-");
+  if (legacySeparatorIndex === -1) return { conversationId: null, shopId: null };
+
+  const conversationId = state.slice(0, legacySeparatorIndex);
+  const shopId = state.slice(legacySeparatorIndex + 1);
+  if (!conversationId || !/^\d+$/.test(shopId)) {
+    return { conversationId: null, shopId: null };
+  }
+
+  return { conversationId, shopId };
 }
 
 export async function generateAuthUrl(conversationId, shopId) {

@@ -19,9 +19,20 @@ export async function loader({ request }) {
     });
   }
 
+  const shopId = request.headers.get("X-Shopify-Shop-Id");
+  if (!shopId) {
+    return new Response(JSON.stringify({
+      status: "error",
+      message: "Missing shop identifier"
+    }), {
+      status: 400,
+      headers: corsHeaders(request)
+    });
+  }
+
   try {
     // Check if a token exists for this conversation ID
-    const token = await getCustomerToken(conversationId);
+    const token = await getCustomerToken(conversationId, shopId);
 
     if (token) {
       // Token exists and is valid
@@ -60,7 +71,7 @@ function corsHeaders(request) {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Accept",
+    "Access-Control-Allow-Headers": "Content-Type, Accept, X-Shopify-Shop-Id",
     "Access-Control-Max-Age": "86400"
   };
 }

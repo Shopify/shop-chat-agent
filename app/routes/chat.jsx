@@ -8,7 +8,12 @@ import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
-import { conversationBelongsToShop } from "../services/conversation-access.server";
+import {
+  getSseHeaders,
+  jsonChatResponse,
+  preflightChatResponse,
+  resolveChatConversationId
+} from "../services/chat-request.server.js";
 
 
 /**
@@ -17,10 +22,7 @@ import { conversationBelongsToShop } from "../services/conversation-access.serve
 export async function loader({ request }) {
   // Handle OPTIONS requests (CORS preflight)
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: getCorsHeaders(request)
-    });
+    return preflightChatResponse(request);
   }
 
   const url = new URL(request.url);
@@ -36,7 +38,7 @@ export async function loader({ request }) {
   }
 
   // API-only: reject all other requests
-  return new Response(JSON.stringify({ error: AppConfig.errorMessages.apiUnsupported }), { status: 400, headers: getCorsHeaders(request) });
+  return jsonChatResponse(request, { error: AppConfig.errorMessages.apiUnsupported }, 400);
 }
 
 /**
@@ -44,10 +46,7 @@ export async function loader({ request }) {
  */
 export async function action({ request }) {
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: getCorsHeaders(request)
-    });
+    return preflightChatResponse(request);
   }
 
   return handleChatRequest(request);
@@ -63,26 +62,18 @@ async function handleHistoryRequest(request, conversationId) {
   const shopId = request.headers.get("X-Shopify-Shop-Id");
 
   if (!shopId) {
-    return new Response(
-      JSON.stringify({ error: AppConfig.errorMessages.missingShopIdentifier }),
-      { status: 400, headers: getCorsHeaders(request) }
-    );
+    return jsonChatResponse(request, { error: AppConfig.errorMessages.missingShopIdentifier }, 400);
   }
 
   const conversation = await getConversation(conversationId);
 
-  // The shop header is client-provided, so this is defense-in-depth; the primary
-  // protection is that conversation IDs are server-created and unguessable.
-  if (!conversationBelongsToShop(conversation, shopId)) {
-    return new Response(
-      JSON.stringify({ error: AppConfig.errorMessages.conversationNotFound }),
-      { status: 404, headers: getCorsHeaders(request) }
-    );
+  if (!conversation?.shopId || conversation.shopId !== shopId) {
+    return jsonChatResponse(request, { error: AppConfig.errorMessages.conversationNotFound }, 404);
   }
 
   const messages = await getConversationHistory(conversationId);
 
-  return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request) });
+  return jsonChatResponse(request, { messages });
 }
 
 /**
@@ -94,10 +85,7 @@ async function handleChatRequest(request) {
   try {
     const shopId = request.headers.get("X-Shopify-Shop-Id");
     if (!shopId) {
-      return new Response(
-        JSON.stringify({ error: AppConfig.errorMessages.missingShopIdentifier }),
-        { status: 400, headers: getSseHeaders(request) }
-      );
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.missingShopIdentifier }, 400);
     }
 
     // Get message data from request body
@@ -106,26 +94,23 @@ async function handleChatRequest(request) {
 
     // Validate required message
     if (!userMessage) {
-      return new Response(
-        JSON.stringify({ error: AppConfig.errorMessages.missingMessage }),
-        { status: 400, headers: getSseHeaders(request) }
-      );
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.missingMessage }, 400);
     }
 
-    // Continue an existing conversation only if it belongs to this shop; otherwise
-    // start a fresh one with an unguessable ID so conversations can't be enumerated.
-    let conversationId = body.conversation_id;
-    if (conversationId) {
-      const conversation = await getConversation(conversationId);
-      if (!conversationBelongsToShop(conversation, shopId)) {
-        return new Response(
-          JSON.stringify({ error: AppConfig.errorMessages.conversationNotFound }),
-          { status: 404, headers: getSseHeaders(request) }
-        );
-      }
-    } else {
-      conversationId = crypto.randomUUID();
+    // The shop header is client-provided, so this is defense-in-depth; the primary
+    // protection is that conversation IDs are server-created and unguessable.
+    const conversationResolution = await resolveChatConversationId({
+      requestedConversationId: body.conversation_id,
+      shopId,
+      findConversation: getConversation,
+      createId: () => crypto.randomUUID()
+    });
+
+    if (conversationResolution.notFound) {
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.conversationNotFound }, 404);
     }
+
+    const conversationId = conversationResolution.conversationId;
 
     const promptType = body.prompt_type || AppConfig.api.defaultPromptType;
 
@@ -145,10 +130,7 @@ async function handleChatRequest(request) {
     });
   } catch (error) {
     console.error('Error in chat request handler:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: getCorsHeaders(request)
-    });
+    return jsonChatResponse(request, { error: error.message }, 500);
   }
 }
 
@@ -374,41 +356,4 @@ async function getCustomerAccountUrls(shopDomain, conversationId) {
     console.error("Error getting customer MCP API URL:", error);
     return null;
   }
-}
-
-/**
- * Gets CORS headers for the response
- * @param {Request} request - The request object
- * @returns {Object} CORS headers object
- */
-function getCorsHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
-  const requestHeaders = request.headers.get("Access-Control-Request-Headers") || "Content-Type, Accept";
-
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": requestHeaders,
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Max-Age": "86400" // 24 hours
-  };
-}
-
-/**
- * Get SSE headers for the response
- * @param {Request} request - The request object
- * @returns {Object} SSE headers object
- */
-function getSseHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
-
-  return {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
-    "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
-  };
 }

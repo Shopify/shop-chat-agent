@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { conversationBelongsToShop } from "./services/conversation-access.server.js";
 
 if (process.env.NODE_ENV !== "production") {
   if (!global.prismaGlobal) {
@@ -24,7 +25,7 @@ export async function storeCodeVerifier(state, verifier) {
   try {
     return await prisma.codeVerifier.create({
       data: {
-        id: `cv_${Date.now()}`,
+        id: `cv_${crypto.randomUUID()}`,
         state,
         verifier,
         expiresAt
@@ -114,10 +115,19 @@ export async function storeCustomerToken(conversationId, accessToken, expiresAt)
 /**
  * Get a customer access token by conversation ID
  * @param {string} conversationId - The conversation ID
+ * @param {string} shopId - The shop the conversation belongs to
  * @returns {Promise<Object|null>} - The customer token or null if not found/expired
  */
-export async function getCustomerToken(conversationId) {
+export async function getCustomerToken(conversationId, shopId) {
   try {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+
+    if (!conversationBelongsToShop(conversation, shopId)) {
+      return null;
+    }
+
     const token = await prisma.customerToken.findFirst({
       where: {
         conversationId,
