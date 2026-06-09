@@ -14,6 +14,7 @@ import {
   preflightChatResponse,
   resolveChatConversationId
 } from "../services/chat-request.server.js";
+import { rateLimitExceeded } from "../services/rate-limiter.server";
 
 
 /**
@@ -59,6 +60,12 @@ export async function action({ request }) {
  * @returns {Response} JSON response with chat history
  */
 async function handleHistoryRequest(request, conversationId) {
+  if (rateLimitExceeded(request, "history", 60)) {
+    return jsonChatResponse(request, { error: AppConfig.errorMessages.rateLimitExceeded }, 429, {
+      "Retry-After": "60"
+    });
+  }
+
   const shopId = request.headers.get("X-Shopify-Shop-Id");
 
   if (!shopId) {
@@ -83,6 +90,12 @@ async function handleHistoryRequest(request, conversationId) {
  */
 async function handleChatRequest(request) {
   try {
+    if (rateLimitExceeded(request, "chat", 20)) {
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.rateLimitExceeded }, 429, {
+        "Retry-After": "60"
+      });
+    }
+
     const shopId = request.headers.get("X-Shopify-Shop-Id");
     if (!shopId) {
       return jsonChatResponse(request, { error: AppConfig.errorMessages.missingShopIdentifier }, 400);
