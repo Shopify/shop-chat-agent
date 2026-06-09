@@ -14,6 +14,8 @@ export const AppConfig = {
   // Error Message Templates
   errorMessages: {
     missingMessage: "Message is required",
+    missingShopIdentifier: "Shop identifier is required",
+    conversationNotFound: "Conversation not found",
     apiUnsupported: "This endpoint only supports server-sent events (SSE) requests or history requests.",
     authFailed: "Authentication failed with Claude API",
     apiKeyError: "Please check your API key in environment variables",

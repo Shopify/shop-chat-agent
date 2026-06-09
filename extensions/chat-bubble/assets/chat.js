@@ -637,7 +637,8 @@
             method: 'GET',
             headers: {
               'Accept': 'application/json',
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'X-Shopify-Shop-Id': window.shopId
             },
             mode: 'cors'
           });
@@ -781,7 +782,11 @@
           try {
             const tokenUrl = 'https://localhost:3458/auth/token-status?conversation_id=' +
               encodeURIComponent(conversationId);
-            const response = await fetch(tokenUrl);
+            const response = await fetch(tokenUrl, {
+              headers: {
+                'X-Shopify-Shop-Id': window.shopId
+              }
+            });
 
             if (!response.ok) {
               throw new Error('Token status check failed: ' + response.status);

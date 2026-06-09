@@ -39,7 +39,7 @@ class MCPClient {
       console.log(`Connecting to MCP server at ${this.customerMcpEndpoint}`);
 
       if (this.conversationId) {
-        const dbToken = await getCustomerToken(this.conversationId);
+        const dbToken = await getCustomerToken(this.conversationId, this.shopId);
 
         if (dbToken && dbToken.accessToken) {
           this.customerAccessToken = dbToken.accessToken;
@@ -178,7 +178,7 @@ class MCPClient {
       let accessToken = this.customerAccessToken;
 
       if (!accessToken || accessToken === "") {
-        const dbToken = await getCustomerToken(this.conversationId);
+        const dbToken = await getCustomerToken(this.conversationId, this.shopId);
 
         if (dbToken && dbToken.accessToken) {
           accessToken = dbToken.accessToken;

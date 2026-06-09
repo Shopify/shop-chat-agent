@@ -3,11 +3,17 @@
  * Handles chat interactions with Claude API and tools
  */
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
+import { saveMessage, getConversation, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
+import {
+  getSseHeaders,
+  jsonChatResponse,
+  preflightChatResponse,
+  resolveChatConversationId
+} from "../services/chat-request.server.js";
 
 
 /**
@@ -16,10 +22,7 @@ import { createToolService } from "../services/tool.server";
 export async function loader({ request }) {
   // Handle OPTIONS requests (CORS preflight)
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: getCorsHeaders(request)
-    });
+    return preflightChatResponse(request);
   }
 
   const url = new URL(request.url);
@@ -35,13 +38,17 @@ export async function loader({ request }) {
   }
 
   // API-only: reject all other requests
-  return new Response(JSON.stringify({ error: AppConfig.errorMessages.apiUnsupported }), { status: 400, headers: getCorsHeaders(request) });
+  return jsonChatResponse(request, { error: AppConfig.errorMessages.apiUnsupported }, 400);
 }
 
 /**
  * React Router action function for handling POST requests
  */
 export async function action({ request }) {
+  if (request.method === "OPTIONS") {
+    return preflightChatResponse(request);
+  }
+
   return handleChatRequest(request);
 }
 
@@ -52,9 +59,21 @@ export async function action({ request }) {
  * @returns {Response} JSON response with chat history
  */
 async function handleHistoryRequest(request, conversationId) {
+  const shopId = request.headers.get("X-Shopify-Shop-Id");
+
+  if (!shopId) {
+    return jsonChatResponse(request, { error: AppConfig.errorMessages.missingShopIdentifier }, 400);
+  }
+
+  const conversation = await getConversation(conversationId);
+
+  if (!conversation?.shopId || conversation.shopId !== shopId) {
+    return jsonChatResponse(request, { error: AppConfig.errorMessages.conversationNotFound }, 404);
+  }
+
   const messages = await getConversationHistory(conversationId);
 
-  return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request) });
+  return jsonChatResponse(request, { messages });
 }
 
 /**
@@ -64,20 +83,35 @@ async function handleHistoryRequest(request, conversationId) {
  */
 async function handleChatRequest(request) {
   try {
+    const shopId = request.headers.get("X-Shopify-Shop-Id");
+    if (!shopId) {
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.missingShopIdentifier }, 400);
+    }
+
     // Get message data from request body
     const body = await request.json();
     const userMessage = body.message;
 
     // Validate required message
     if (!userMessage) {
-      return new Response(
-        JSON.stringify({ error: AppConfig.errorMessages.missingMessage }),
-        { status: 400, headers: getSseHeaders(request) }
-      );
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.missingMessage }, 400);
     }
 
-    // Generate or use existing conversation ID
-    const conversationId = body.conversation_id || Date.now().toString();
+    // The shop header is client-provided, so this is defense-in-depth; the primary
+    // protection is that conversation IDs are server-created and unguessable.
+    const conversationResolution = await resolveChatConversationId({
+      requestedConversationId: body.conversation_id,
+      shopId,
+      findConversation: getConversation,
+      createId: () => crypto.randomUUID()
+    });
+
+    if (conversationResolution.notFound) {
+      return jsonChatResponse(request, { error: AppConfig.errorMessages.conversationNotFound }, 404);
+    }
+
+    const conversationId = conversationResolution.conversationId;
+
     const promptType = body.prompt_type || AppConfig.api.defaultPromptType;
 
     // Create a stream for the response
@@ -96,10 +130,7 @@ async function handleChatRequest(request) {
     });
   } catch (error) {
     console.error('Error in chat request handler:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: getCorsHeaders(request)
-    });
+    return jsonChatResponse(request, { error: error.message }, 500);
   }
 }
 
@@ -157,7 +188,7 @@ async function handleChatSession({
     let productsToDisplay = [];
 
     // Save user message to the database
-    await saveMessage(conversationId, 'user', userMessage);
+    await saveMessage(conversationId, 'user', userMessage, shopId);
 
     // Fetch all messages from the database for this conversation
     const dbMessages = await getConversationHistory(conversationId);
@@ -202,7 +233,7 @@ async function handleChatSession({
               content: message.content
             });
 
-            saveMessage(conversationId, message.role, JSON.stringify(message.content))
+            saveMessage(conversationId, message.role, JSON.stringify(message.content), shopId)
               .catch((error) => {
                 console.error("Error saving message to database:", error);
               });
@@ -235,7 +266,8 @@ async function handleChatSession({
                 toolUseId,
                 conversationHistory,
                 stream.sendMessage,
-                conversationId
+                conversationId,
+                shopId
               );
             } else {
               await toolService.handleToolSuccess(
@@ -244,7 +276,8 @@ async function handleChatSession({
                 toolUseId,
                 conversationHistory,
                 productsToDisplay,
-                conversationId
+                conversationId,
+                shopId
               );
             }
 
@@ -323,41 +356,4 @@ async function getCustomerAccountUrls(shopDomain, conversationId) {
     console.error("Error getting customer MCP API URL:", error);
     return null;
   }
-}
-
-/**
- * Gets CORS headers for the response
- * @param {Request} request - The request object
- * @returns {Object} CORS headers object
- */
-function getCorsHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
-  const requestHeaders = request.headers.get("Access-Control-Request-Headers") || "Content-Type, Accept";
-
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": requestHeaders,
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Max-Age": "86400" // 24 hours
-  };
-}
-
-/**
- * Get SSE headers for the response
- * @param {Request} request - The request object
- * @returns {Object} SSE headers object
- */
-function getSseHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
-
-  return {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
-    "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
-  };
 }
