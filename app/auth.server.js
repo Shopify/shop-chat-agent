@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from "node:crypto";
+
 /**
  * Authentication service for handling OAuth and PKCE flows
  */
@@ -67,10 +69,7 @@ async function getBaseAuthUrl(conversationId) {
  * @returns {string} - The generated code verifier
  */
 export function generateCodeVerifier() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  const randomString = convertBufferToString(array);
-  return base64UrlEncode(randomString);
+  return randomBytes(32).toString("base64url");
 }
 
 /**
@@ -79,37 +78,5 @@ export function generateCodeVerifier() {
  * @returns {Promise<string>} - The generated code challenge
  */
 export async function generateCodeChallenge(verifier) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digestOp = await crypto.subtle.digest('SHA-256', data);
-  const hash = convertBufferToString(digestOp);
-  return base64UrlEncode(hash);
-}
-
-/**
- * Convert a buffer to a string
- * @param {ArrayBuffer} buffer - The buffer to convert
- * @returns {string} - The converted string
- */
-function convertBufferToString(buffer) {
-  const uintArray = new Uint8Array(buffer);
-  const numberArray = Array.from(uintArray);
-  return String.fromCharCode.apply(null, numberArray);
-}
-
-/**
- * Encode a string in base64url format
- * @param {string} str - The string to encode
- * @returns {string} - The encoded string
- */
-function base64UrlEncode(str) {
-  // Convert string to base64
-  let base64 = btoa(str);
-
-  // Make base64 URL-safe by replacing characters
-  base64 = base64.replace(/\+/g, "-")
-                 .replace(/\//g, "_")
-                 .replace(/=+$/, ""); // Remove any trailing '=' padding
-
-  return base64;
+  return createHash("sha256").update(verifier).digest("base64url");
 }

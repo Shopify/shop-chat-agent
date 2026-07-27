@@ -10,6 +10,7 @@ export const AppConfig = {
     maxTokens: 2000,
     defaultPromptType: 'standardAssistant',
   },
+  
 
   // Error Message Templates
   errorMessages: {

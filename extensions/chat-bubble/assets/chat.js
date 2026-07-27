@@ -481,7 +481,8 @@
             prompt_type: promptType
           });
 
-          const streamUrl = 'https://localhost:3458/chat';
+          const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://orange-conventions-current-avatar.trycloudflare.com';
+          const streamUrl = new URL('/chat', appBaseUrl).toString();
           const shopId = window.shopId;
 
           const response = await fetch(streamUrl, {
@@ -630,7 +631,8 @@
           messagesContainer.appendChild(loadingMessage);
 
           // Fetch history from the server
-          const historyUrl = `https://localhost:3458/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`;
+          const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://orange-conventions-current-avatar.trycloudflare.com';
+          const historyUrl = new URL(`/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`, appBaseUrl).toString();
           console.log('Fetching history from:', historyUrl);
 
           const response = await fetch(historyUrl, {
@@ -779,8 +781,8 @@
           attemptCount++;
 
           try {
-            const tokenUrl = 'https://localhost:3458/auth/token-status?conversation_id=' +
-              encodeURIComponent(conversationId);
+            const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://orange-conventions-current-avatar.trycloudflare.com';
+            const tokenUrl = new URL(`/auth/token-status?conversation_id=${encodeURIComponent(conversationId)}`, appBaseUrl).toString();
             const response = await fetch(tokenUrl);
 
             if (!response.ok) {

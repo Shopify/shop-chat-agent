@@ -80,7 +80,10 @@ export async function loader({ request }) {
   } catch (error) {
     console.error("Error exchanging code for token:", error);
     console.log("shopId", shopId);
-    return new Response(JSON.stringify({ error: "Failed to obtain access token" }), { status: 500 });
+    return new Response(JSON.stringify({
+      error: "Failed to obtain access token",
+      details: error instanceof Error ? error.message : String(error)
+    }), { status: 500 });
   }
 }
 
@@ -90,13 +93,13 @@ export async function loader({ request }) {
  * @returns {Promise<Object>} - The token response
  */
 async function exchangeCodeForToken(code, state) {
-  const clientId = process.env.SHOPIFY_API_KEY;
+  const clientId = process.env.SHOPIFY_API_KEY || process.env.SHOPIFY_CLIENT_ID || process.env.CLIENT_ID;
   const [conversationId, shopId] = state.split("-");
   if (!clientId || !shopId) {
-    throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
+    throw new Error("SHOPIFY_API_KEY/SHOPIFY_CLIENT_ID and shop state are required");
   }
 
-  const redirectUri = process.env.REDIRECT_URL;
+  const redirectUri = process.env.REDIRECT_URL || process.env.SHOPIFY_APP_URL + "/callback";
 
   // Correct token URL format
   const tokenUrl = await getTokenUrl(conversationId);

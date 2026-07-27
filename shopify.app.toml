@@ -2,7 +2,7 @@
 
 client_id = "bffe8f1e67a53b13480a07c22eac4f0f"
 name = "shop-chat-agent"
-application_url = "https://observer-carter-showed-eau.trycloudflare.com"
+application_url = "https://orange-conventions-current-avatar.trycloudflare.com"
 embedded = true
 
 [webhooks]
@@ -13,11 +13,11 @@ api_version = "2026-10"
 scopes = "unauthenticated_read_product_listings"
 
 [auth]
-redirect_urls = [ "https://observer-carter-showed-eau.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://orange-conventions-current-avatar.trycloudflare.com/api/auth" ]
 
 [customer_authentication]
 redirect_uris = [
-  "https://observer-carter-showed-eau.trycloudflare.com/callback"
+  "https://orange-conventions-current-avatar.trycloudflare.com/callback"
 ]
 
 [build]
