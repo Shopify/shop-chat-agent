@@ -18,7 +18,7 @@ if (
 const host = new URL(process.env.SHOPIFY_APP_URL || "http://localhost")
   .hostname;
 let hmrConfig;
-
+console.log(host, 'vinoth')
 if (host === "localhost") {
   hmrConfig = {
     protocol: "ws",
