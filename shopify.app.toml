@@ -24,6 +24,8 @@ redirect_urls = [ "https://shop-chat-agent.com/api/auth" ]
 embedded = false
 
 [customer_authentication]
+# TODO: Swap for production/tunnel HTTPS URL when not using `shopify app dev --use-localhost` (Customer Account API may require a public HTTPS host).
+# Matches REDIRECT_URL in .env.example and the /auth/callback route (auth.callback.jsx); CLI reverse-proxies on port 3458.
 redirect_uris = [
-  "https://shop-chat-agent.com/callback"
+  "https://localhost:3458/auth/callback"
 ]
