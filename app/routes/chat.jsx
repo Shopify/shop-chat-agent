@@ -8,7 +8,7 @@ import { saveMessage, getConversationHistory, storeCustomerAccountUrl, getCustom
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
-import { createToolService } from "../services/tool.server";
+import { createToolService, sanitizeToolResultContent } from "../services/tool.server";
 import { localTools, executeLocalTool } from "../services/local-tools.server";
 import { unauthenticated } from "../shopify.server";
 
@@ -202,6 +202,13 @@ async function handleChatSession({
         content = JSON.parse(dbMessage.content);
       } catch (e) {
         content = dbMessage.content;
+      }
+      // Rows saved before tool_result sanitizing may still carry MCP-only
+      // fields; clean them on load so those conversations can recover.
+      if (dbMessage.role === 'user' && Array.isArray(content)) {
+        content = content.map(block => block?.type === 'tool_result'
+          ? { ...block, content: sanitizeToolResultContent(block.content) }
+          : block);
       }
       return {
         role: dbMessage.role,
