@@ -6,6 +6,24 @@ import { saveMessage } from "../db.server";
 import AppConfig from "./config.server";
 
 /**
+ * Reduces tool_result content to shapes the Anthropic Messages API accepts.
+ * MCP servers return extra fields (e.g. search_shop_policies_and_faqs sends
+ * `mimeType` on text blocks); stored raw, those 400 every later request that
+ * replays the history, so the conversation goes permanently silent.
+ * @param {*} content - tool_result content (string, array of blocks, or undefined)
+ * @returns {*} Content with array blocks reduced to { type: "text", text }
+ */
+export const sanitizeToolResultContent = (content) => {
+  if (!Array.isArray(content)) return content;
+  return content.map((block) => ({
+    type: "text",
+    text: block?.type === "text" && typeof block.text === "string"
+      ? block.text
+      : JSON.stringify(block?.type === "text" ? block.text : block)
+  }));
+};
+
+/**
  * Creates a tool service instance
  * @returns {Object} Tool service with methods for managing tools
  */
@@ -231,7 +249,7 @@ export function createToolService() {
   const buildToolResult = (toolUseId, content) => ({
     type: "tool_result",
     tool_use_id: toolUseId,
-    content: content
+    content: sanitizeToolResultContent(content)
   });
 
   /**
