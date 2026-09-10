@@ -69,6 +69,13 @@ export function createClaudeService(apiKey = process.env.CLAUDE_API_KEY) {
     // Wait for final message
     const finalMessage = await stream.finalMessage();
 
+    // Block until the assistant message row is persisted, so its tool_result
+    // row is never written first (an assistant turn saved after its tool_result
+    // 400s the next request).
+    if (streamHandlers.awaitSaves) {
+      await streamHandlers.awaitSaves();
+    }
+
     // Process tool use requests
     if (streamHandlers.onToolUse && finalMessage.content) {
       for (const content of finalMessage.content) {

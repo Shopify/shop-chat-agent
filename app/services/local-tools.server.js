@@ -70,21 +70,23 @@ export async function executeLocalTool(toolName, toolArgs) {
  * @returns {Object} Store information
  */
 function getStoreInfo(args) {
+  // Keep in sync with <store_info> in app/prompts/standard-assistant.txt.
   const storeData = {
     hours: {
-      weekdays: "10:00 AM - 6:00 PM",
-      weekends: "10:00 AM - 4:00 PM",
+      weekdays: "10:00 - 18:00",
+      weekends: "Closed",
       timezone: "EET"
     },
     contact: {
       email: "info@informatica.com.ua",
       phone: "+380(99) 381-5288",
-      chat: "Available 24/7"
+      chat: "This chat is available 24/7; Viber & Telegram during working hours"
     },
     shipping: {
-      domestic: "Delivery based on Nova Poshta pricing",
+      domestic: "Nova Poshta, per carrier pricing",
       processing_time: "1-2 business days"
-    }
+    },
+    returns: "14 days after delivery"
   };
 
   const { info_type } = args;

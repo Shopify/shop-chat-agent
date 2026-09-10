@@ -134,8 +134,16 @@ async function handleChatSession({
 
   // Initialize MCP client
   const shopId = request.headers.get("X-Shopify-Shop-Id");
-  const shopDomain = request.headers.get("Origin");
-  const customerMcpEndpoint = await getCustomerMcpEndpoint(shopDomain, conversationId);
+  // Origin can be absent, the literal string "null" (sandboxed iframes), or
+  // malformed. Normalize to "<protocol>//<host>" or null; a null shopDomain
+  // means MCP endpoints can't be built and every MCP connect is skipped.
+  const shopDomain = normalizeOrigin(request.headers.get("Origin"));
+  if (!shopDomain) {
+    console.warn(`chat: unusable Origin header "${request.headers.get("Origin")}"; MCP tools disabled for this request`);
+  }
+  const customerMcpEndpoint = shopDomain
+    ? await getCustomerMcpEndpoint(shopDomain, conversationId)
+    : null;
   const mcpClient = new MCPClient(
     shopDomain,
     conversationId,
@@ -148,7 +156,7 @@ async function handleChatSession({
     stream.sendMessage({ type: 'id', conversation_id: conversationId });
 
     // Connect to MCP servers and get available tools
-    let storefrontMcpTools = [], customerMcpTools = [];
+    let storefrontMcpTools = [], customerMcpTools = [], ucpMcpTools = [];
 
     try {
       storefrontMcpTools = await mcpClient.connectToStorefrontServer();
@@ -160,6 +168,15 @@ async function handleChatSession({
       console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
     }
 
+    // UCP catalog is isolated so a discovery failure doesn't also drop the
+    // storefront / customer tools.
+    try {
+      ucpMcpTools = await mcpClient.connectToUcpServer();
+      console.log(`Connected to UCP MCP with ${ucpMcpTools.length} catalog tools`);
+    } catch (error) {
+      console.warn('Failed to connect to UCP MCP, continuing without catalog search:', error.message);
+    }
+
     // Add local tools to the available tools
     mcpClient.tools = [...mcpClient.tools, ...localTools];
     console.log(`Added ${localTools.length} local tools. Total tools: ${mcpClient.tools.length}`);
@@ -168,6 +185,9 @@ async function handleChatSession({
     let conversationHistory = [];
     let productsToDisplay = [];
     let cartActionsToDisplay = [];
+    // Assistant-message save promises; awaited before each turn's tool_result
+    // row is written so history rows stay in a valid order.
+    const pendingSaves = [];
 
     // Save user message to the database
     await saveMessage(conversationId, 'user', userMessage);
@@ -191,8 +211,19 @@ async function handleChatSession({
 
     // Execute the conversation stream
     let finalMessage = { role: 'user', content: userMessage };
+    let turn = 0;
 
-    while (finalMessage.stop_reason !== "end_turn") {
+    // Loop only while Claude has more work to do (tool_use / pause_turn). Every
+    // other stop_reason ends the turn — with a short fallback for the ones that
+    // aren't a clean finish.
+    while (true) {
+      turn += 1;
+
+      // Every tool_result for this assistant turn is collected here and flushed
+      // as ONE user message; separate rows per parallel tool_use block would be
+      // an invalid Messages API shape.
+      const toolResults = [];
+
       finalMessage = await claudeService.streamConversation(
         {
           messages: conversationHistory,
@@ -215,24 +246,23 @@ async function handleChatSession({
               content: message.content
             });
 
-            saveMessage(conversationId, message.role, JSON.stringify(message.content))
-              .catch((error) => {
-                console.error("Error saving message to database:", error);
-              });
+            pendingSaves.push(
+              saveMessage(conversationId, message.role, JSON.stringify(message.content))
+                .catch((error) => {
+                  console.error("Error saving message to database:", error);
+                })
+            );
 
             // Send a completion message
             stream.sendMessage({ type: 'message_complete' });
           },
 
+          // Block the tool-use step until assistant saves have settled
+          awaitSaves: () => Promise.all(pendingSaves),
+
           // Handle tool use requests
           onToolUse: async (content) => {
             const toolName = content.name;
-
-            // Skip server-side tools handled by Anthropic (web_search)
-            if (toolName === 'web_search') {
-              return;
-            }
-
             const toolArgs = content.input;
             const toolUseId = content.id;
 
@@ -247,36 +277,46 @@ async function handleChatSession({
             // Check if it's a local tool
             const isLocalTool = localTools.some(tool => tool.name === toolName);
 
-            // Call the appropriate tool
-            let toolUseResponse;
-            if (isLocalTool) {
-              console.log(`Executing local tool: ${toolName}`);
-              toolUseResponse = await executeLocalTool(toolName, toolArgs);
-            } else {
-              console.log(`Calling MCP tool: ${toolName}`);
-              toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
-            }
+            try {
+              // Call the appropriate tool
+              let toolUseResponse;
+              if (isLocalTool) {
+                console.log(`Executing local tool: ${toolName}`);
+                toolUseResponse = await executeLocalTool(toolName, toolArgs);
+              } else {
+                console.log(`Calling MCP tool: ${toolName}`);
+                toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
+              }
 
-            // Handle tool response based on success/error
-            if (toolUseResponse.error) {
-              await toolService.handleToolError(
-                toolUseResponse,
-                toolName,
-                toolUseId,
-                conversationHistory,
-                stream.sendMessage,
-                conversationId
-              );
-            } else {
-              await toolService.handleToolSuccess(
-                toolUseResponse,
-                toolName,
-                toolUseId,
-                conversationHistory,
-                productsToDisplay,
-                conversationId,
-                cartActionsToDisplay
-              );
+              // Handle tool response based on success/error
+              if (toolUseResponse.error) {
+                toolService.handleToolError(
+                  toolUseResponse,
+                  toolName,
+                  toolUseId,
+                  toolResults,
+                  stream.sendMessage
+                );
+              } else {
+                toolService.handleToolSuccess(
+                  toolUseResponse,
+                  toolName,
+                  toolUseId,
+                  toolResults,
+                  productsToDisplay,
+                  cartActionsToDisplay
+                );
+              }
+            } catch (error) {
+              // A thrown tool call still has to leave exactly one tool_result
+              // for this block, or the next request is a malformed user->user.
+              console.error(`Tool ${toolName} threw:`, error);
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: toolUseId,
+                content: `Не вдалося виконати інструмент ${toolName}: ${error.message}`,
+                is_error: true
+              });
             }
 
             // Signal new message to client
@@ -294,6 +334,45 @@ async function handleChatSession({
           }
         }
       );
+
+      // One user message carrying every tool_result for the turn just finished.
+      await toolService.flushToolResults(conversationHistory, toolResults, conversationId);
+
+      const stopReason = finalMessage.stop_reason;
+
+      // More work to do — go round again, unless we've hit the safety cap.
+      if (stopReason === "tool_use" || stopReason === "pause_turn") {
+        if (turn >= AppConfig.api.maxToolTurns) {
+          console.warn(`Tool loop hit maxToolTurns (${AppConfig.api.maxToolTurns}) for ${conversationId}`);
+          const capMessage = 'Це запитання виявилося складнішим за очікуване. Уточніть, будь ласка, деталі або зверніться до менеджера.';
+          stream.sendMessage({ type: 'chunk', chunk: '\n\n' + capMessage });
+          stream.sendMessage({ type: 'message_complete' });
+          // Persist a real assistant turn so history stays role-alternating
+          // (the loop broke right after a user tool_result row).
+          try {
+            await saveMessage(conversationId, 'assistant', JSON.stringify([{ type: 'text', text: capMessage }]));
+          } catch (error) {
+            console.error("Error saving cap message to database:", error);
+          }
+        } else {
+          continue;
+        }
+      } else if (stopReason === "max_tokens") {
+        stream.sendMessage({
+          type: 'chunk',
+          chunk: '\n\n(Відповідь була обрізана. Попросіть продовжити або звузьте запит.)'
+        });
+        stream.sendMessage({ type: 'message_complete' });
+      } else if (stopReason === "refusal") {
+        stream.sendMessage({
+          type: 'chunk',
+          chunk: '\n\nВибачте, я не можу відповісти на це запитання. Зверніться, будь ласка, до менеджера.'
+        });
+        stream.sendMessage({ type: 'message_complete' });
+      }
+      // end_turn, stop_sequence, or anything else: nothing extra to send.
+
+      break;
     }
 
     // Signal end of turn
@@ -322,8 +401,24 @@ async function handleChatSession({
 }
 
 /**
+ * Normalizes an Origin header to "<protocol>//<host>", or null if it's absent,
+ * the literal string "null", or not a valid URL.
+ * @param {string|null} origin
+ * @returns {string|null}
+ */
+function normalizeOrigin(origin) {
+  if (!origin || origin === "null") return null;
+  try {
+    const url = new URL(origin);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get the customer MCP endpoint for a shop
- * @param {string} shopDomain - The shop domain
+ * @param {string} shopDomain - The shop domain (already normalized, non-null)
  * @param {string} conversationId - The conversation ID
  * @returns {string} The customer MCP endpoint
  */

@@ -1,5 +1,6 @@
 import { generateAuthUrl } from "./auth.server";
 import { getCustomerToken } from "./db.server";
+import AppConfig from "./services/config.server";
 
 /**
  * Client for interacting with Model Context Protocol (MCP) API endpoints.
@@ -17,11 +18,18 @@ class MCPClient {
     this.tools = [];
     this.customerTools = [];
     this.storefrontTools = [];
+    this.ucpTools = [];
+    // hostUrl is a normalized Origin ("https://shop.example") or null. When it's
+    // null the endpoints can't be built and the connect methods skip themselves.
     // TODO: Make this dynamic, for that first we need to allow access of mcp tools on password proteted demo stores.
-    this.storefrontMcpEndpoint = `${hostUrl}/api/mcp`;
+    this.storefrontMcpEndpoint = hostUrl ? `${hostUrl}/api/mcp` : null;
+    // Shopify's catalog tools live here, not on /api/mcp. Every tools/call needs
+    // an agent-profile URL in meta (see callUcpTool).
+    this.ucpMcpEndpoint = hostUrl ? `${hostUrl}${AppConfig.ucp.mcpPath}` : null;
 
-    const accountHostUrl = hostUrl.replace(/(\.myshopify\.com)$/, '.account$1');
-    this.customerMcpEndpoint = customerMcpEndpoint || `${accountHostUrl}/customer/api/mcp`;
+    const accountHostUrl = hostUrl ? hostUrl.replace(/(\.myshopify\.com)$/, '.account$1') : null;
+    this.customerMcpEndpoint = customerMcpEndpoint
+      || (accountHostUrl ? `${accountHostUrl}/customer/api/mcp` : null);
     this.customerAccessToken = "";
     this.conversationId = conversationId;
     this.shopId = shopId;
@@ -35,6 +43,10 @@ class MCPClient {
    * @throws {Error} If connection to MCP server fails
    */
   async connectToCustomerServer() {
+    if (!this.customerMcpEndpoint) {
+      console.warn("No customer MCP endpoint; skipping customer tools");
+      return [];
+    }
     try {
       console.log(`Connecting to MCP server at ${this.customerMcpEndpoint}`);
 
@@ -83,6 +95,10 @@ class MCPClient {
    * @throws {Error} If connection to MCP server fails
    */
   async connectToStorefrontServer() {
+    if (!this.storefrontMcpEndpoint) {
+      console.warn("No storefront MCP endpoint; skipping storefront tools");
+      return [];
+    }
     try {
       console.log(`Connecting to MCP server at ${this.storefrontMcpEndpoint}`);
 
@@ -119,6 +135,49 @@ class MCPClient {
   }
 
   /**
+   * Connects to the UCP MCP server (Shopify catalog) and retrieves the catalog
+   * tools, filtered to the allow-list in AppConfig.ucp.tools so the cart /
+   * checkout / order tools the endpoint also exposes never reach Claude.
+   *
+   * @returns {Promise<Array>} Array of available UCP catalog tools
+   * @throws {Error} If connection to the UCP MCP server fails
+   */
+  async connectToUcpServer() {
+    if (!this.ucpMcpEndpoint) {
+      console.warn("No UCP MCP endpoint; skipping catalog tools");
+      return [];
+    }
+    try {
+      console.log(`Connecting to UCP MCP server at ${this.ucpMcpEndpoint}`);
+
+      const headers = {
+        "Content-Type": "application/json"
+      };
+
+      // tools/list does not need the agent profile; tools/call does.
+      const response = await this._makeJsonRpcRequest(
+        this.ucpMcpEndpoint,
+        "tools/list",
+        {},
+        headers
+      );
+
+      const toolsData = response.result && response.result.tools ? response.result.tools : [];
+      const allowed = new Set(AppConfig.ucp.tools);
+      const ucpTools = this._formatToolsData(toolsData)
+        .filter((tool) => allowed.has(tool.name));
+
+      this.ucpTools = ucpTools;
+      this.tools = [...this.tools, ...ucpTools];
+
+      return ucpTools;
+    } catch (e) {
+      console.error("Failed to connect to UCP MCP server: ", e);
+      throw e;
+    }
+  }
+
+  /**
    * Dispatches a tool call to the appropriate MCP server based on the tool name.
    *
    * @param {string} toolName - Name of the tool to call
@@ -129,6 +188,8 @@ class MCPClient {
   async callTool(toolName, toolArgs) {
     if (this.customerTools.some(tool => tool.name === toolName)) {
       return this.callCustomerTool(toolName, toolArgs);
+    } else if (this.ucpTools.some(tool => tool.name === toolName)) {
+      return this.callUcpTool(toolName, toolArgs);
     } else if (this.storefrontTools.some(tool => tool.name === toolName)) {
       return this.callStorefrontTool(toolName, toolArgs);
     } else {
@@ -148,12 +209,6 @@ class MCPClient {
     try {
       console.log("Calling storefront tool", toolName, toolArgs);
 
-      // The UCP search_catalog tool requires its arguments nested under a
-      // "catalog" object (e.g. { catalog: { query: "..." } }), not flat.
-      const requestArgs = toolName === "search_catalog" && !toolArgs?.catalog
-        ? { catalog: toolArgs }
-        : toolArgs;
-
       const headers = {
         "Content-Type": "application/json"
       };
@@ -163,7 +218,7 @@ class MCPClient {
         "tools/call",
         {
           name: toolName,
-          arguments: requestArgs,
+          arguments: toolArgs,
         },
         headers
       );
@@ -173,6 +228,79 @@ class MCPClient {
       console.error(`Error calling tool ${toolName}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Calls a catalog tool on the UCP MCP server. search_catalog, get_product and
+   * lookup_catalog all take the same envelope: a meta["ucp-agent"].profile URL
+   * that Shopify fetches for capability negotiation, plus a `catalog` object.
+   *
+   * A discovery / server error is turned into a normal tool_result the model can
+   * act on (offer a manager hand-off) instead of throwing and killing the stream.
+   *
+   * @param {string} toolName - One of AppConfig.ucp.tools
+   * @param {Object} toolArgs - Claude's args; `catalog` may already be nested
+   * @returns {Promise<Object>} The tool result, or { error: { type, data } }
+   */
+  async callUcpTool(toolName, toolArgs) {
+    // Build a fresh catalog object — never mutate Claude's tool input, which is
+    // already stored verbatim as the assistant message.
+    const incoming = toolArgs && toolArgs.catalog ? toolArgs.catalog : (toolArgs || {});
+    const catalog = {
+      ...incoming,
+      context: {
+        address_country: "UA",
+        currency: "UAH",
+        language: "uk",
+        ...incoming.context,
+      },
+      pagination: {
+        limit: 5,
+        ...incoming.pagination,
+      },
+    };
+
+    const catalogUnavailable = {
+      error: {
+        type: "catalog_unavailable",
+        data: "Пошук по каталогу товарів тимчасово недоступний. Вибачся перед клієнтом і запропонуй звернутися до менеджера."
+      }
+    };
+
+    const requestParams = {
+      name: toolName,
+      arguments: {
+        meta: { "ucp-agent": { profile: AppConfig.ucp.agentProfileUrl } },
+        catalog,
+      },
+    };
+
+    // One retry: UCP discovery intermittently returns -32603 "Internal error".
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`Calling UCP tool ${toolName} (attempt ${attempt})`, JSON.stringify(catalog));
+
+        const response = await this._makeJsonRpcRequest(
+          this.ucpMcpEndpoint,
+          "tools/call",
+          requestParams,
+          { "Content-Type": "application/json" }
+        );
+
+        if (response.error || (response.result && response.result.isError)) {
+          console.error(`UCP tool ${toolName} failed:`, JSON.stringify(response.error || response.result));
+          if (attempt === 1) continue;
+          return catalogUnavailable;
+        }
+
+        return response.result || response;
+      } catch (error) {
+        console.error(`Error calling UCP tool ${toolName} (attempt ${attempt}):`, error);
+        if (attempt === 2) return catalogUnavailable;
+      }
+    }
+
+    return catalogUnavailable;
   }
 
   /**
