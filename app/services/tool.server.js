@@ -15,18 +15,17 @@ export function createToolService() {
    * @param {Object} toolUseResponse - The error response from the tool
    * @param {string} toolName - The name of the tool
    * @param {string} toolUseId - The ID of the tool use request
-   * @param {Array} conversationHistory - The conversation history
+   * @param {Array} toolResults - Accumulator of tool_result blocks for this assistant turn
    * @param {Function} sendMessage - Function to send messages to the client
-   * @param {string} conversationId - The conversation ID
    */
-  const handleToolError = async (toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversationId) => {
+  const handleToolError = (toolUseResponse, toolName, toolUseId, toolResults, sendMessage) => {
     if (toolUseResponse.error.type === "auth_required") {
       console.log("Auth required for tool:", toolName);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
+      toolResults.push(buildToolResult(toolUseId, toolUseResponse.error.data));
       sendMessage({ type: 'auth_required' });
     } else {
       console.log("Tool use error", toolUseResponse.error);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
+      toolResults.push(buildToolResult(toolUseId, toolUseResponse.error.data));
     }
   };
 
@@ -35,12 +34,11 @@ export function createToolService() {
    * @param {Object} toolUseResponse - The response from the tool
    * @param {string} toolName - The name of the tool
    * @param {string} toolUseId - The ID of the tool use request
-   * @param {Array} conversationHistory - The conversation history
+   * @param {Array} toolResults - Accumulator of tool_result blocks for this assistant turn
    * @param {Array} productsToDisplay - Array to add product results to
-   * @param {string} conversationId - The conversation ID
    * @param {Array} cartActionsToDisplay - Array to add real-cart write instructions to
    */
-  const handleToolSuccess = async (toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId, cartActionsToDisplay = []) => {
+  const handleToolSuccess = (toolUseResponse, toolName, toolUseId, toolResults, productsToDisplay, cartActionsToDisplay = []) => {
     let contentForHistory = toolUseResponse.content;
 
     // Check if this is a product search result
@@ -48,10 +46,28 @@ export function createToolService() {
       const allFormattedProducts = formatAllProductsFromResult(toolUseResponse);
       productsToDisplay.push(...allFormattedProducts.slice(0, AppConfig.tools.maxProductsToDisplay));
 
-      // Give Claude a corrected, deterministic price string for every product
-      // actually present in the raw response, so it never has to convert
-      // minor-unit amounts itself.
-      contentForHistory = appendPriceSummaryBlock(toolUseResponse.content, allFormattedProducts);
+      // The raw UCP payload is ~17k chars for 5 products (duplicated description
+      // HTML at product + variant + collection level) and would re-ride every
+      // later turn. Store a compact list instead, then append the authoritative
+      // price block so Claude never converts minor-unit amounts itself.
+      const slimContent = [{
+        type: 'text',
+        text: JSON.stringify({
+          count: allFormattedProducts.length,
+          products: allFormattedProducts.map(slimProductForHistory)
+        })
+      }];
+
+      // Reinforce prompt rule 6 at the point of failure: an empty search is a
+      // silent dead-end in the transcripts otherwise.
+      if (allFormattedProducts.length === 0) {
+        slimContent.push({
+          type: 'text',
+          text: 'Знайдено 0 товарів за цим запитом. Повідом клієнта, що за таким запитом нічого не знайдено, і запропонуй уточнити параметри пошуку або звернутися до менеджера.'
+        });
+      }
+
+      contentForHistory = appendPriceSummaryBlock(slimContent, allFormattedProducts);
     }
 
     // add_to_cart doesn't write to Shopify itself; it hands back a variant/quantity
@@ -60,7 +76,7 @@ export function createToolService() {
       cartActionsToDisplay.push(toolUseResponse.cart_action);
     }
 
-    addToolResultToHistory(conversationHistory, toolUseId, contentForHistory, conversationId);
+    toolResults.push(buildToolResult(toolUseId, contentForHistory));
   };
 
   /**
@@ -151,9 +167,31 @@ export function createToolService() {
         ? product.description
         : product.description?.html) || '',
       url: product.url || '',
-      variant_id: product.variants?.[0]?.id || null
+      variant_id: product.variants?.[0]?.id || null,
+      available: product.available
+        ?? product.variants?.[0]?.availability?.available
+        ?? null
     };
   };
+
+  /** Strips HTML tags and collapses whitespace. */
+  const stripHtml = (html) =>
+    String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  /**
+   * Compact product shape stored in conversation history (see handleToolSuccess).
+   * @param {Object} p - A formatProductData() object
+   * @returns {Object}
+   */
+  const slimProductForHistory = (p) => ({
+    id: p.id,
+    title: p.title,
+    price: p.price,
+    url: p.url,
+    available: p.available,
+    variant_id: p.variant_id,
+    description: stripHtml(p.description).slice(0, 400)
+  });
 
   // Must stay byte-identical to the label referenced in
   // app/prompts/standard-assistant.txt response_rules.
@@ -185,31 +223,37 @@ export function createToolService() {
   };
 
   /**
-   * Adds a tool result to the conversation history
-   * @param {Array} conversationHistory - The conversation history
+   * Builds a single tool_result content block.
    * @param {string} toolUseId - The ID of the tool use request
-   * @param {string} content - The content of the tool result
+   * @param {*} content - The content of the tool result
+   * @returns {Object} A tool_result block
+   */
+  const buildToolResult = (toolUseId, content) => ({
+    type: "tool_result",
+    tool_use_id: toolUseId,
+    content: content
+  });
+
+  /**
+   * Flushes every tool_result for one assistant turn as a SINGLE user message.
+   * The Anthropic Messages API requires all tool_result blocks answering one
+   * assistant turn to sit in one user message's content array; persisting them
+   * as separate rows (one per parallel tool_use block) produces an invalid
+   * user -> user shape that 400s the next request.
+   * @param {Array} conversationHistory - The conversation history
+   * @param {Array} toolResults - tool_result blocks accumulated during the turn
    * @param {string} conversationId - The conversation ID
    */
-  const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId) => {
-    const toolResultMessage = {
-      role: 'user',
-      content: [{
-        type: "tool_result",
-        tool_use_id: toolUseId,
-        content: content
-      }]
-    };
+  const flushToolResults = async (conversationHistory, toolResults, conversationId) => {
+    if (!toolResults || toolResults.length === 0) return;
 
-    // Add to in-memory history
-    conversationHistory.push(toolResultMessage);
+    conversationHistory.push({ role: 'user', content: toolResults });
 
-    // Save to database with special format to indicate tool result
     if (conversationId) {
       try {
-        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content));
+        await saveMessage(conversationId, 'user', JSON.stringify(toolResults));
       } catch (error) {
-        console.error('Error saving tool result to database:', error);
+        console.error('Error saving tool results to database:', error);
       }
     }
   };
@@ -218,7 +262,7 @@ export function createToolService() {
     handleToolError,
     handleToolSuccess,
     processProductSearchResult,
-    addToolResultToHistory
+    flushToolResults
   };
 }
 
