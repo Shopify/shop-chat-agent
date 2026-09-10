@@ -59,7 +59,7 @@
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background var(--transition);
+  transition: box-shadow var(--transition), background var(--transition);
   border: none;
   font-size: 0;
   z-index: 2;
@@ -68,12 +68,35 @@
 .shop-chat-main-bubble:hover {
   background: var(--main-bubble-hover);
   color: var(--main-bubble-text);
-  transform: scale(1.08);
+  box-shadow: 0 12px 20px -4px rgba(0, 0, 0, 0.18), 0 6px 8px -3px rgba(0, 0, 0, 0.08);
 }
 
 .shop-chat-main-bubble:active {
   background: #004a98;
-  transform: scale(0.95);
+  box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.18);
+}
+
+/* Faint full-screen backdrop while the fan is open.
+   Lives on the toggle so a tap on it reports event.target === .shop-chat-main-bubble
+   and the existing click handler (chat.js) closes the fan. */
+.shop-chat-main-bubble::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.07);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: -1;
+}
+
+.shop-chat-interface.open .shop-chat-main-bubble::before {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.shop-ai-chat-open .shop-chat-main-bubble::before {
+  display: none;
 }
 
 .shop-chat-fab-toggle__icon {
@@ -122,14 +145,29 @@
   z-index: 1;
   transform: translateY(0) scale(1);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+/* Invisible vertical hit-area extension so near-misses above/below a circle still
+   land on the button and consecutive targets are contiguous (48 -> ~66px). */
+.shop-chat-fab-action::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -9px;
+  bottom: -9px;
+  border-radius: 0;
 }
 
 .shop-chat-interface.open .shop-chat-fab-action {
   transform: translateY(calc(-1 * var(--rise))) scale(1);
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  z-index: 3;
 }
 
 .shop-chat-interface.open .shop-chat-fab-action:hover {
@@ -162,6 +200,8 @@
 .shop-chat-fab-action__label {
   position: absolute;
   right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -171,7 +211,18 @@
   border-radius: 8px;
   padding: 4px 10px;
   box-shadow: var(--shadow);
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+/* Transparent bridge across the visual gap so a tap between the pill and the
+   circle still triggers the action (keeps the 12px gap visible). */
+.shop-chat-fab-action__label::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: 16px;
 }
 
 .shop-chat-fab-action__label--stacked {
@@ -186,11 +237,27 @@
   color: var(--text-light);
 }
 
+.shop-chat-main-bubble:focus-visible,
+.shop-chat-fab-action:focus-visible {
+  outline: 3px solid #005AB8;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-chat-main-bubble,
+  .shop-chat-main-bubble::before,
+  .shop-chat-fab-action,
+  .shop-chat-fab-toggle__icon {
+    transition-duration: 0.01ms;
+  }
+}
+
 /* Chat Window */
 .shop-ai-chat-window {
   position: absolute;
   bottom: 80px;
   right: 0;
+  z-index: 5; /* stay above the open-fan backdrop (main bubble ::before) */
   width: 92vw;
   max-width: 420px;
   height: 70vh;
