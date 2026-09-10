@@ -288,7 +288,7 @@
         if (mainBubble) {
           mainBubble.addEventListener("click", (e) => {
             e.stopPropagation(); // Prevent event bubbling
-            container.classList.toggle("open");
+            if (this.elements.chatWindow.classList.contains("active")) { container.classList.remove("open"); this.closeChatWindow(); } else container.classList.toggle("open");
           });
         }
 
@@ -311,8 +311,9 @@
 
         // Close options on Escape key
         document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && container.classList.contains("open")) {
+          if (e.key === "Escape") {
             container.classList.remove("open");
+            this.closeChatWindow();
           }
         });
       },

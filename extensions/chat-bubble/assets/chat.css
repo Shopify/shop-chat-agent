@@ -41,8 +41,8 @@
   pointer-events: none;
 }
 
-.shop-chat-interface button,
-.shop-chat-interface a {
+.shop-chat-interface > button,
+.shop-chat-interface > a {
   pointer-events: auto;
 }
 
@@ -123,6 +123,16 @@ body.shop-ai-chat-open .shop-chat-main-bubble::before {
 .shop-chat-interface.open .shop-chat-fab-toggle__icon--close {
   opacity: 1;
   transform: rotate(0deg) scale(1);
+}
+
+.shop-chat-interface:has(.shop-ai-chat-window.active) .shop-chat-fab-toggle__icon--bubble {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.5);
+}
+
+.shop-chat-interface:has(.shop-ai-chat-window.active) .shop-chat-fab-toggle__icon--close {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
 }
 
 /* Chat Options (FAB actions) */
