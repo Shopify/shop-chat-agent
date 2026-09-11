@@ -146,8 +146,16 @@ Verification turned up two more issues, both now fixed:
   that ignore `interactive-widget` (e.g. iOS Safari).
 
 Not verified: iOS Safari, landscape, desktop (the desktop code path is unchanged apart from the textarea and the Enter handler).
-Known and out of scope: while the chat is **closed**, the FAB still sits inside the `z-index: 2` wrapper. The block also
-outputs its own `<meta name="viewport" … user-scalable=no>`, which disables zoom on the merchant page.
+Follow-up changes:
+
+- **App-block wrapper lift on all screen sizes:** the wrapper is now raised while the chat window **or its option menu**
+  is open (not only on mobile). When closed it stays at `z-index: 2`, so theme drawers still cover the launcher.
+  Checked on desktop Chrome with the rule injected: 2 closed, 9999 menu open, 9999 chat open, 2 after close. At a 911 px
+  window height the desktop popup (top 228 px) didn't overlap the header either way.
+- **Zoom-blocking viewport tag removed:** `chat-interface.liquid` rendered its own
+  `<meta name="viewport" … maximum-scale=1.0, user-scalable=no>` into `<body>` on every page, blocking pinch-zoom store-wide.
+  It's gone. The textarea is 16 px on mobile instead, which avoids iOS Safari's zoom-on-focus.
+  **Not yet verified on the phone** (pinch-zoom before and after).
 
 ## Not covered this round
 

@@ -16,6 +16,10 @@ const assetsDir = new URL("../../extensions/chat-bubble/assets/", import.meta.ur
 // Rendered-HTML equivalents of edits to chat-interface.liquid
 const PATCHES = [
   [
+    /<meta name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no">\s*/,
+    "",
+  ],
+  [
     /<input type="text" placeholder="([^"]*)">/,
     '<textarea rows="1" enterkeyhint="send" placeholder="$1"></textarea>',
   ],
