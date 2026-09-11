@@ -95,3 +95,6 @@ Mobile layout/keyboard behaviour can't be judged in desktop DevTools device mode
 ## Deployment
 
 The app is configured for deployment with Fly.io (dockerfile included) and uses Litestream for SQLite replication. Standard Shopify app deployment procedures apply.
+
+- **Backend (Remix app):** deployed manually with `fly deploy`. The GitHub "Fly Deploy" workflow runs on every push to `main` and fails because the repo has no `FLY_API_TOKEN` secret. That's expected; merging does not deploy the backend.
+- **Chat widget (theme app extension):** `shopify app deploy` releases a new app version to the store; merging alone doesn't change the storefront.
