@@ -115,6 +115,40 @@ vv.addEventListener("resize", __mrFit); vv.addEventListener("scroll", __mrFit); 
 
 Verify each fix by re-running the baseline scenario (steps 01–09) with `capture.ps1` and comparing JSON with `baseline/`.
 
+## Implemented and verified (branch `feat/mobile-keyboard-ux`)
+
+Fixes 1–5 were implemented in `chat.js`, `chat.css` and `chat-interface.liquid`, then verified on the same phone
+**before deploying**, using `tools/mobile-research/override.mjs` (serves the local files to the phone tab).
+Captures are in `fixed/`, and every row below was checked on the screenshot, not only in the JSON.
+
+| Step | innerH | vvH | vvOffsetTop | Window | Screenshot |
+|---|---|---|---|---|---|
+| 02b open chat (fan → AI) | 783 | 783 | 0 | 0–783 | Full screen: header, conversation, input. **No keyboard** |
+| 03 tap input (page top) | 528 | 528 | 0 | 0–528 | **Header visible**, textarea right above the keyboard, **no autofill row**, latest message in view |
+| 06 Back | 783 | 783 | 0 | 0–783 | Keyboard hidden, chat still open |
+| 07 Back again | 783 | 783 | 0 | closed | **Chat closed, still on the product page** |
+| 08c open from page scrolled 391 px | 839 | 839 | 0 | 0–839 | Header visible |
+| 08d tap input (scrolled page) | 528 | 528 | 0 | 0–528 | **Textarea fully visible** (was hidden under the keyboard before) |
+| 08e close with X | 783 | 783 | 0 | closed | **Scroll position kept (391 → 391)**, viewport meta restored |
+
+A first pass also confirmed that Enter (the `keydown` handler) sends the message and the reply with product cards renders.
+
+Verification turned up two more issues, both now fixed:
+
+- **Theme header painted over the full-screen chat:** Shopify's app-block wrapper (`.shopify-app-block`) is
+  `position: relative; z-index: 2`, a stacking context that traps the widget's `z-index: 9999` below the
+  theme's sticky header section (`z-index: 10`). While the chat is open on mobile, the wrapper is raised to 9999 (`chat.css`).
+- **Input hidden when the chat was opened from a scrolled page, even with the `visualViewport` fit:** with the
+  URL bar hidden, the keyboard brings it back, but Chrome keeps the old `innerHeight` (839), so everything renders
+  56 px too low. `scrollTo(0)` doesn't bring the bar back (probed). Fix: while the chat is open on mobile, append
+  `interactive-widget=resizes-content` to the viewport meta tags (restored on close). Chrome then resizes the
+  layout viewport consistently (`innerH` 528). The `visualViewport` fit stays as the fallback for browsers
+  that ignore `interactive-widget` (e.g. iOS Safari).
+
+Not verified: iOS Safari, landscape, desktop (the desktop code path is unchanged apart from the textarea and the Enter handler).
+Known and out of scope: while the chat is **closed**, the FAB still sits inside the `z-index: 2` wrapper. The block also
+outputs its own `<meta name="viewport" … user-scalable=no>`, which disables zoom on the merchant page.
+
 ## Not covered this round
 
 - Intercom, tawk.to, Zendesk, Gorgias, Shopify Inbox (same scenario, same kit)

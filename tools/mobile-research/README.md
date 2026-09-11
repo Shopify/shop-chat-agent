@@ -54,6 +54,20 @@ means Chrome's default `interactive-widget=resizes-visual`: the browser scrolls 
 visual viewport to the input and pushes the header off-screen. If `innerH` shrinks
 instead, the page is in `resizes-content` mode.
 
+## Testing local changes before deploying
+
+`override.mjs` makes the phone tab load `extensions/chat-bubble/assets/chat.js` and `chat.css`
+from your working copy, and patches the rendered HTML for `chat-interface.liquid` edits (keep
+`PATCHES` in the script in sync with those edits). Run it in its own terminal, since it has to keep running:
+
+```powershell
+node tools/mobile-research/override.mjs kabel-essager "<product url>"   # navigates the on-screen tab
+```
+
+It prints `local chat.js`, `local chat.css` and `document ... (1/1 patches)` when the override took effect.
+Then run the scenario with `capture.ps1` **without `-Url`**, which would open a new tab without the override.
+Stop the script to get the deployed widget back.
+
 ## Baseline scenario (as run for `docs/mobile-ux/baseline/`)
 
 Run it again after any layout fix and compare the JSON step by step.
