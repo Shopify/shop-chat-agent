@@ -90,6 +90,8 @@ This is a Shopify app that provides an AI-powered chat widget for storefronts. T
 
 No specific test framework is configured. Use `npm run build` and `npm run dev` to verify functionality. The `/chat` endpoint can be tested directly for API integration testing.
 
+Mobile layout/keyboard behaviour can't be judged in desktop DevTools device mode — use the real-Android kit in `tools/mobile-research/README.md`.
+
 ## Deployment
 
 The app is configured for deployment with Fly.io (dockerfile included) and uses Litestream for SQLite replication. Standard Shopify app deployment procedures apply.
