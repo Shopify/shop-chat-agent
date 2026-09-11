@@ -1,8 +1,10 @@
 # Mobile chat UX findings (real Android + soft keyboard)
 
 Device: Redmi Note 12S, Chrome Beta 154, CSS viewport 392×873, dpr 2.75, gesture navigation.
-With the URL bar visible, `innerH` = 783. Captures and JSON are in `baseline/` and `competitors/`,
-and the method is in `tools/mobile-research/README.md`.
+With the URL bar visible, `innerH` = 783. The method is in `tools/mobile-research/README.md`.
+The screenshots and JSON captures named below (`baseline/`, `competitors/`, `experiments/`, `fixed/`) were
+removed from the tree after merging. View them at commit `1dd6354`, e.g.
+`git show 1dd6354:docs/mobile-ux/fixed/03-input-focused.png > 03.png`.
 
 ## Why desktop emulation looked fine
 
@@ -113,13 +115,14 @@ vv.addEventListener("resize", __mrFit); vv.addEventListener("scroll", __mrFit); 
 7. **Remove the nested product-grid scroll** (`max-height: 40vh; overflow-y: auto`) on mobile.
 8. **Use one definition of "mobile"** (UA sniff in JS vs the 480 px CSS breakpoint) so wide phones and landscape get the same layout.
 
-Verify each fix by re-running the baseline scenario (steps 01–09) with `capture.ps1` and comparing JSON with `baseline/`.
+Verify each fix by re-running the baseline scenario (steps 01–09) with `capture.ps1` and comparing JSON with
+`baseline/` at commit `1dd6354`.
 
 ## Implemented and verified (branch `feat/mobile-keyboard-ux`)
 
 Fixes 1–5 were implemented in `chat.js`, `chat.css` and `chat-interface.liquid`, then verified on the same phone
 **before deploying**, using `tools/mobile-research/override.mjs` (serves the local files to the phone tab).
-Captures are in `fixed/`, and every row below was checked on the screenshot, not only in the JSON.
+Captures were in `fixed/` (see commit `1dd6354`), and every row below was checked on the screenshot, not only in the JSON.
 
 | Step | innerH | vvH | vvOffsetTop | Window | Screenshot |
 |---|---|---|---|---|---|

@@ -7,8 +7,8 @@ measurements on a real phone instead.
 
 ## One-time setup
 
-1. adb: Android platform-tools extracted to `C:\tools\platform-tools` (add to PATH
-   or let `capture.ps1` find it there).
+1. adb: download [platform-tools](https://dl.google.com/android/repository/platform-tools-latest-windows.zip)
+   and extract it to `C:\tools\platform-tools` (add it to PATH, or let `capture.ps1` find it there).
 2. Phone: Settings → About phone → tap *Build number* 7× → Developer options →
    **USB debugging** on. Xiaomi/Redmi: tap *MIUI/HyperOS version* 7× instead; Developer
    options are under *Additional settings*; also enable **USB debugging (Security settings)**
@@ -42,7 +42,7 @@ still animating, the two can disagree, and the **screenshot is ground truth**. R
 with a longer `-WaitMs` if they differ.
 They can also disagree in a stable state. When the URL bar reappears while the chat opens from a scrolled
 page, Chrome keeps reporting the URL-bar-hidden `innerH` (839 instead of 783), so every rect is about 56 px
-off and `inputFullyVisible` says true for an input that's actually hidden (baseline `08r-05`). Always
+off and `inputFullyVisible` says true for an input that's actually hidden (baseline `08r-05`, at commit `1dd6354`). Always
 look at the screenshot, not just the JSON.
 
 Key fields: `innerH` (layout viewport), `vvH` / `vvOffsetTop` (what's actually visible),
@@ -69,6 +69,8 @@ Then run the scenario with `capture.ps1` **without `-Url`**, which would open a 
 Stop the script to get the deployed widget back.
 
 ## Baseline scenario (as run for `docs/mobile-ux/baseline/`)
+
+The original captures are in commit `1dd6354`. New captures are gitignored, so they stay local.
 
 Run it again after any layout fix and compare the JSON step by step.
 

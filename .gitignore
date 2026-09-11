@@ -24,3 +24,7 @@ database.sqlite
 # Ignore shopify files created during app dev
 .shopify/*
 .shopify.lock
+
+# Phone research captures (tools/mobile-research/capture.ps1)
+/docs/mobile-ux/**/*.png
+/docs/mobile-ux/**/*.json
