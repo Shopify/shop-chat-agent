@@ -25,7 +25,6 @@
   --main-bubble-bg: #0071DC;
   --main-bubble-hover: #005AB8;
   --main-bubble-text: #FFFFFF;
-  --dynamic-vh: 80vh;
 }
 
 /* Base Chat Interface */
@@ -41,8 +40,8 @@
   pointer-events: none;
 }
 
-.shop-chat-interface button,
-.shop-chat-interface a {
+.shop-chat-interface > button,
+.shop-chat-interface > a {
   pointer-events: auto;
 }
 
@@ -123,6 +122,16 @@ body.shop-ai-chat-open .shop-chat-main-bubble::before {
 .shop-chat-interface.open .shop-chat-fab-toggle__icon--close {
   opacity: 1;
   transform: rotate(0deg) scale(1);
+}
+
+.shop-chat-interface:has(.shop-ai-chat-window.active) .shop-chat-fab-toggle__icon--bubble {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.5);
+}
+
+.shop-chat-interface:has(.shop-ai-chat-window.active) .shop-chat-fab-toggle__icon--close {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
 }
 
 /* Chat Options (FAB actions) */
@@ -386,23 +395,28 @@ body.shop-ai-chat-open .shop-chat-main-bubble::before {
   flex-shrink: 0;
 }
 
-.shop-ai-chat-input input {
+/* textarea, not input: Chrome on Android shows no autofill bar above the keyboard for it */
+.shop-ai-chat-input textarea {
+  display: block;
   flex: 1;
   padding: 12px 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
+  font-family: inherit;
   font-size: 14px;
+  line-height: 20px;
+  resize: none;
   outline: none;
   background: #FFFFFF;
   color: var(--text);
   transition: all var(--transition);
 }
 
-.shop-ai-chat-input input::placeholder {
+.shop-ai-chat-input textarea::placeholder {
   color: var(--placeholder-text);
 }
 
-.shop-ai-chat-input input:focus {
+.shop-ai-chat-input textarea:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(0, 113, 220, 0.1);
 }
@@ -602,13 +616,17 @@ body.shop-ai-chat-open .shop-chat-main-bubble::before {
   .shop-ai-chat-window {
     position: fixed;
     width: 100vw;
-    height: var(--dynamic-vh);
-    max-height: var(--dynamic-vh);
+    /* Full screen; chat.js pins it to the visual viewport while the keyboard is open */
+    top: var(--shop-ai-vv-top, 0px);
+    bottom: auto;
+    height: var(--shop-ai-vv-height, 100%);
+    max-height: none;
+    min-height: 0;
     left: 0;
     right: 0;
-    bottom: 0;
     border-radius: 0;
     transform: translateY(100%);
+    transition: opacity var(--transition), transform var(--transition);
     display: flex;
     flex-direction: column;
   }
@@ -660,10 +678,22 @@ body.shop-ai-chat-open .shop-chat-main-bubble::before {
     overflow: hidden;
   }
 
+  /* overflow instead of position: fixed keeps the page scroll position */
+  html:has(body.shop-ai-chat-open),
   body.shop-ai-chat-open {
     overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: var(--dynamic-vh);
   }
+
+  /* 16px keeps iOS Safari from zooming in when the input is focused */
+  .shop-ai-chat-input textarea {
+    font-size: 16px;
+  }
+}
+
+/* Shopify's app block wrapper is its own stacking context (z-index: 2), so sticky
+   theme headers paint over the widget. Lift it while the chat or its menu is open;
+   when closed, theme drawers should still cover the launcher. */
+.shopify-app-block:has(.shop-ai-chat-window.active),
+.shopify-app-block:has(.shop-chat-interface.open) {
+  z-index: 9999;
 }

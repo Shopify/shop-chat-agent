@@ -1,0 +1,33 @@
+{
+  "time": "2026-09-11T07:25:11.972Z",
+  "url": "https://www.tidio.com/home-sales/#mobile-widget",
+  "visibility": "visible",
+  "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+  "uaMobile": true,
+  "cssMobile480": true,
+  "orientation": "portrait-primary",
+  "viewportMeta": "width=device-width, initial-scale=1",
+  "dpr": 2.75,
+  "screenH": 873,
+  "innerW": 392,
+  "innerH": 783,
+  "vvH": 783,
+  "vvOffsetTop": 0,
+  "vvScale": 1,
+  "scrollY": 0,
+  "occludedH": 0,
+  "chatOpen": false,
+  "bodyLocked": false,
+  "activeElement": "body",
+  "rects": {
+    "window": null,
+    "header": null,
+    "messages": null,
+    "input": null
+  },
+  "messagesScroll": null,
+  "headerVisible": null,
+  "inputFullyVisible": null,
+  "inputGapToVvBottom": null,
+  "visibleMessagesH": null
+}

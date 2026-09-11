@@ -1,5 +1,4 @@
 {{ 'chat.css' | asset_url | stylesheet_tag }}
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <div class="shop-chat-interface">
   <button class="shop-chat-fab-action ai-option shop-ai-chat-bubble">
@@ -58,7 +57,7 @@
       </div>
       <div class="shop-ai-chat-messages"></div>
       <div class="shop-ai-chat-input">
-        <input type="text" placeholder="{{ 'chat.inputPlaceholder' | t }}">
+        <textarea rows="1" enterkeyhint="send" placeholder="{{ 'chat.inputPlaceholder' | t }}"></textarea>
         <button class="shop-ai-chat-send">
           <svg
             xmlns="http://www.w3.org/2000/svg"

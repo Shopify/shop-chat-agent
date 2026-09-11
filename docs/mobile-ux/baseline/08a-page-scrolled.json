@@ -1,0 +1,53 @@
+{
+  "time": "2026-09-11T07:21:00.499Z",
+  "url": "https://informatica.com.ua/products/kabel-essager-type-c-pd-100w-fast-charge-s-displeem-qc-3-0-200sm-provod-dlya-bystroy-zaryadki-i-peredachi-dannykh",
+  "visibility": "visible",
+  "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+  "uaMobile": true,
+  "cssMobile480": true,
+  "orientation": "portrait-primary",
+  "viewportMeta": "width=device-width,initial-scale=1",
+  "dpr": 2.75,
+  "screenH": 873,
+  "innerW": 392,
+  "innerH": 839,
+  "vvH": 839,
+  "vvOffsetTop": 0,
+  "vvScale": 1,
+  "scrollY": 399,
+  "occludedH": 0,
+  "chatOpen": false,
+  "bodyLocked": false,
+  "activeElement": "button.shop-ai-chat-close",
+  "rects": {
+    "window": {
+      "top": 839,
+      "bottom": 1510,
+      "height": 671
+    },
+    "header": {
+      "top": 840,
+      "bottom": 904,
+      "height": 64
+    },
+    "messages": {
+      "top": 904,
+      "bottom": 1426,
+      "height": 522
+    },
+    "input": {
+      "top": 1426,
+      "bottom": 1509,
+      "height": 83
+    }
+  },
+  "messagesScroll": {
+    "top": 440,
+    "height": 962,
+    "client": 522
+  },
+  "headerVisible": false,
+  "inputFullyVisible": false,
+  "inputGapToVvBottom": -670,
+  "visibleMessagesH": 0
+}
