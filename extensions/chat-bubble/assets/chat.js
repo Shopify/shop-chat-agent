@@ -31,7 +31,7 @@
           chatBubble: container.querySelector(".shop-ai-chat-bubble"),
           chatWindow: container.querySelector(".shop-ai-chat-window"),
           closeButton: container.querySelector(".shop-ai-chat-close"),
-          chatInput: container.querySelector(".shop-ai-chat-input input"),
+          chatInput: container.querySelector(".shop-ai-chat-input textarea"),
           sendButton: container.querySelector(".shop-ai-chat-send"),
           messagesContainer: container.querySelector(".shop-ai-chat-messages"),
         };
@@ -42,7 +42,7 @@
         // Set up event listeners
         this.setupEventListeners();
 
-        // Fix for iOS Safari viewport height issues
+        // Keep the open chat inside the visible area above the soft keyboard
         if (this.isMobile) {
           this.setupMobileViewport();
         }
@@ -69,16 +69,12 @@
         // Close chat window
         closeButton.addEventListener("click", () => this.closeChatWindow());
 
-        // Send message when pressing Enter in input
-        chatInput.addEventListener("keypress", (e) => {
-          if (e.key === "Enter" && chatInput.value.trim() !== "") {
+        // Send message on Enter (Shift+Enter inserts a new line)
+        chatInput.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+          e.preventDefault();
+          if (chatInput.value.trim() !== "") {
             ShopAIChat.Message.send(chatInput, messagesContainer);
-
-            // On mobile, handle keyboard
-            if (this.isMobile) {
-              chatInput.blur();
-              setTimeout(() => chatInput.focus(), 300);
-            }
           }
         });
 
@@ -115,21 +111,35 @@
        * Setup mobile-specific viewport adjustments
        */
       setupMobileViewport: function () {
-        let isTicking = false;
-        const setViewportHeight = () => {
-          document.documentElement.style.setProperty(
-            "--viewport-height",
-            `${window.innerHeight}px`,
-          );
-          isTicking = false;
-        };
-        window.addEventListener("resize", () => {
-          if (!isTicking) {
-            window.requestAnimationFrame(setViewportHeight);
-            isTicking = true;
+        const viewport = window.visualViewport;
+        if (viewport) {
+          // The keyboard shrinks only the visual viewport and the browser scrolls it
+          // to reveal the input, so follow it to keep the chat header on screen
+          viewport.addEventListener("resize", () => {
+            this.fitToVisualViewport();
+            this.scrollToBottom();
+          });
+          viewport.addEventListener("scroll", () => this.fitToVisualViewport());
+        }
+
+        // Android Back closes the chat instead of leaving the page
+        window.addEventListener("popstate", () => {
+          if (this.elements.chatWindow.classList.contains("active")) {
+            this.closeChatWindow(true);
           }
         });
-        setViewportHeight();
+      },
+
+      /**
+       * Pin the open chat window to the visual viewport (applied by the mobile CSS)
+       */
+      fitToVisualViewport: function () {
+        const { chatWindow } = this.elements;
+        const viewport = window.visualViewport;
+        if (!viewport || !chatWindow.classList.contains("active")) return;
+
+        chatWindow.style.setProperty("--shop-ai-vv-top", `${viewport.offsetTop}px`);
+        chatWindow.style.setProperty("--shop-ai-vv-height", `${viewport.height}px`);
       },
 
       /**
@@ -138,29 +148,33 @@
       toggleChatWindow: function () {
         const { chatWindow, chatInput } = this.elements;
 
-        chatWindow.classList.toggle("active");
-
         if (chatWindow.classList.contains("active")) {
-          // On mobile, prevent body scrolling and delay focus
-          if (this.isMobile) {
-            document.body.classList.add("shop-ai-chat-open");
-            setTimeout(() => chatInput.focus(), 500);
-          } else {
-            chatInput.focus();
-          }
-          // Always scroll messages to bottom when opening
-          this.scrollToBottom();
-        } else {
-          // Remove body class when closing
-          document.body.classList.remove("shop-ai-chat-open");
+          this.closeChatWindow();
+          return;
         }
+
+        chatWindow.classList.add("active");
+
+        if (this.isMobile) {
+          // Prevent body scrolling; the keyboard opens only when the user taps the input
+          document.body.classList.add("shop-ai-chat-open");
+          this.setKeyboardResizesContent(true);
+          this.fitToVisualViewport();
+          history.pushState({ ...history.state, shopAiChat: true }, "");
+        } else {
+          chatInput.focus();
+        }
+        // Always scroll messages to bottom when opening
+        this.scrollToBottom();
       },
 
       /**
        * Close chat window
+       * @param {boolean} [fromHistory] - Closed by the browser Back button
        */
-      closeChatWindow: function () {
+      closeChatWindow: function (fromHistory) {
         const { chatWindow, chatInput } = this.elements;
+        const wasOpen = chatWindow.classList.contains("active");
 
         chatWindow.classList.remove("active");
 
@@ -168,7 +182,36 @@
         if (this.isMobile) {
           chatInput.blur();
           document.body.classList.remove("shop-ai-chat-open");
+
+          if (wasOpen) {
+            this.setKeyboardResizesContent(false);
+
+            // Remove the history entry added when the chat was opened
+            if (!fromHistory && history.state?.shopAiChat) {
+              history.back();
+            }
+          }
         }
+      },
+
+      /**
+       * While the chat is open, let the keyboard resize the layout viewport.
+       * With Chrome's default (resizes-visual) the URL bar can reappear with the
+       * keyboard without the viewport shrinking, hiding the input when the chat
+       * was opened from a scrolled page.
+       * @param {boolean} enabled
+       */
+      setKeyboardResizesContent: function (enabled) {
+        document.querySelectorAll('meta[name="viewport"]').forEach((meta) => {
+          if (enabled) {
+            if (/interactive-widget/.test(meta.content)) return;
+            meta.dataset.shopAiContent = meta.content;
+            meta.content = `${meta.content}, interactive-widget=resizes-content`;
+          } else if (meta.dataset.shopAiContent !== undefined) {
+            meta.content = meta.dataset.shopAiContent;
+            delete meta.dataset.shopAiContent;
+          }
+        });
       },
 
       /**
@@ -1273,7 +1316,7 @@
           }
 
           // Fallback: no variant id resolved, let the assistant handle it
-          const input = document.querySelector(".shop-ai-chat-input input");
+          const input = document.querySelector(".shop-ai-chat-input textarea");
           if (input) {
             input.value = `Add ${product.title} to my cart`;
             const sendButton = document.querySelector(".shop-ai-chat-send");
