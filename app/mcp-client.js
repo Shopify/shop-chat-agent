@@ -1,6 +1,8 @@
 import { generateAuthUrl } from "./auth.server";
 import { getCustomerToken } from "./db.server";
 
+const UCP_AGENT_PROFILE = "https://shopify.dev/ucp/agent-profiles/examples/2026-08-25/valid-with-capabilities.json";
+
 /**
  * Client for interacting with Model Context Protocol (MCP) API endpoints.
  * Manages connections to both customer and storefront MCP endpoints, and handles tool invocation.
@@ -17,8 +19,10 @@ class MCPClient {
     this.tools = [];
     this.customerTools = [];
     this.storefrontTools = [];
+    this.catalogTools = [];
     // TODO: Make this dynamic, for that first we need to allow access of mcp tools on password proteted demo stores.
     this.storefrontMcpEndpoint = `${hostUrl}/api/mcp`;
+    this.catalogMcpEndpoint = `${hostUrl}/api/ucp/mcp`;
 
     const accountHostUrl = hostUrl.replace(/(\.myshopify\.com)$/, '.account$1');
     this.customerMcpEndpoint = customerMcpEndpoint || `${accountHostUrl}/customer/api/mcp`;
@@ -112,6 +116,36 @@ class MCPClient {
   }
 
   /**
+   * Connects to the UCP catalog MCP server and retrieves product tools.
+   * Catalog tools are exposed separately from the standard storefront MCP server.
+   *
+   * @returns {Promise<Array>} Array of available catalog tools
+   */
+  async connectToCatalogServer() {
+    try {
+      console.log(`Connecting to catalog MCP server at ${this.catalogMcpEndpoint}`);
+
+      const response = await this._makeJsonRpcRequest(
+        this.catalogMcpEndpoint,
+        "tools/list",
+        {},
+        { "Content-Type": "application/json" }
+      );
+
+      const toolsData = response.result && response.result.tools ? response.result.tools : [];
+      const catalogTools = this._formatToolsData(toolsData);
+
+      this.catalogTools = catalogTools;
+      this.tools = [...this.tools, ...catalogTools];
+
+      return catalogTools;
+    } catch (error) {
+      console.warn("Failed to connect to catalog MCP server:", error.message);
+      return [];
+    }
+  }
+
+  /**
    * Dispatches a tool call to the appropriate MCP server based on the tool name.
    *
    * @param {string} toolName - Name of the tool to call
@@ -122,10 +156,51 @@ class MCPClient {
   async callTool(toolName, toolArgs) {
     if (this.customerTools.some(tool => tool.name === toolName)) {
       return this.callCustomerTool(toolName, toolArgs);
+    } else if (this.catalogTools.some(tool => tool.name === toolName)) {
+      return this.callCatalogTool(toolName, toolArgs);
     } else if (this.storefrontTools.some(tool => tool.name === toolName)) {
       return this.callStorefrontTool(toolName, toolArgs);
     } else {
       throw new Error(`Tool ${toolName} not found`);
+    }
+  }
+
+  /**
+   * Calls a tool on the UCP catalog MCP server.
+   *
+   * @param {string} toolName - Name of the catalog tool
+   * @param {Object} toolArgs - Arguments to pass to the tool
+   * @returns {Promise<Object>} Result from the tool call
+   */
+  async callCatalogTool(toolName, toolArgs) {
+    try {
+      console.log("Calling catalog tool", toolName, toolArgs);
+
+      const catalogArguments = {
+        ...toolArgs,
+        meta: {
+          ...toolArgs.meta,
+          "ucp-agent": {
+            ...toolArgs.meta?.["ucp-agent"],
+            profile: UCP_AGENT_PROFILE
+          }
+        }
+      };
+
+      const response = await this._makeJsonRpcRequest(
+        this.catalogMcpEndpoint,
+        "tools/call",
+        {
+          name: toolName,
+          arguments: catalogArguments,
+        },
+        { "Content-Type": "application/json" }
+      );
+
+      return response.result || response;
+    } catch (error) {
+      console.error(`Error calling catalog tool ${toolName}:`, error);
+      throw error;
     }
   }
 

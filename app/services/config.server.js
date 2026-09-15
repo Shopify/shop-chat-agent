@@ -25,7 +25,7 @@ export const AppConfig = {
 
   // Tool Configuration
   tools: {
-        productSearchName: "search_shop_catalog",
+        productSearchName: "search_catalog",
     cartUpdateName: "update_cart",
     cartGetName: "get_cart",
     policiesSearchName: "search_shop_policies_and_faqs",

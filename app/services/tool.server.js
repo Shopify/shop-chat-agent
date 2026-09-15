@@ -118,22 +118,35 @@ export function createToolService() {
    * @param {string} conversationId - The conversation ID
    */
   const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId) => {
-    const toolResultMessage = {
-      role: 'user',
-      content: [{
-        type: "tool_result",
-        tool_use_id: toolUseId,
-        content: normalizeToolResultContent(content)
-      }]
+    const toolResultBlock = {
+      type: "tool_result",
+      tool_use_id: toolUseId,
+      content: normalizeToolResultContent(content)
     };
 
+    const previousMessage = conversationHistory[conversationHistory.length - 1];
+    const canAppendToPrevious = previousMessage?.role === 'user' &&
+      Array.isArray(previousMessage.content) &&
+      previousMessage.content.every((block) => block?.type === 'tool_result');
+
+    const toolResultMessage = canAppendToPrevious
+      ? previousMessage
+      : { role: 'user', content: [] };
+
+    toolResultMessage.content.push(toolResultBlock);
+
     // Add to in-memory history
-    conversationHistory.push(toolResultMessage);
+    if (!canAppendToPrevious) {
+      conversationHistory.push(toolResultMessage);
+    }
 
     // Save to database with special format to indicate tool result
     if (conversationId) {
       try {
-        await saveMessage(conversationId, 'user', JSON.stringify(toolResultMessage.content));
+        const contentToSave = canAppendToPrevious
+          ? [toolResultBlock]
+          : toolResultMessage.content;
+        await saveMessage(conversationId, 'user', JSON.stringify(contentToSave));
       } catch (error) {
         console.error('Error saving tool result to database:', error);
       }

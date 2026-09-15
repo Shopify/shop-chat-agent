@@ -144,9 +144,11 @@ async function handleChatSession({
 
     try {
       storefrontMcpTools = await mcpClient.connectToStorefrontServer();
+      const catalogMcpTools = await mcpClient.connectToCatalogServer();
       customerMcpTools = await mcpClient.connectToCustomerServer();
 
       console.log(`Connected to MCP with ${storefrontMcpTools.length} tools`);
+      console.log(`Connected to catalog MCP with ${catalogMcpTools.length} tools`);
       console.log(`Connected to customer MCP with ${customerMcpTools.length} tools`);
     } catch (error) {
       console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
@@ -189,6 +191,25 @@ async function handleChatSession({
         content
       };
     });
+
+    conversationHistory = conversationHistory.reduce((messages, message) => {
+      const previousMessage = messages[messages.length - 1];
+      const isToolResultMessage = message.role === 'user' &&
+        Array.isArray(message.content) &&
+        message.content.every((block) => block?.type === 'tool_result');
+      const canMerge = isToolResultMessage &&
+        previousMessage?.role === 'user' &&
+        Array.isArray(previousMessage.content) &&
+        previousMessage.content.every((block) => block?.type === 'tool_result');
+
+      if (canMerge) {
+        previousMessage.content.push(...message.content);
+      } else {
+        messages.push(message);
+      }
+
+      return messages;
+    }, []);
 
     // Execute the conversation stream
     let finalMessage = { role: 'user', content: userMessage };
