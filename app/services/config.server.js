@@ -25,7 +25,12 @@ export const AppConfig = {
 
   // Tool Configuration
   tools: {
-    productSearchName: "search_shop_catalog",
+        productSearchName: "search_shop_catalog",
+    cartUpdateName: "update_cart",
+    cartGetName: "get_cart",
+    policiesSearchName: "search_shop_policies_and_faqs",
+    recentOrderStatusName: "get_most_recent_order_status",
+    orderStatusName: "get_order_status",
     maxProductsToDisplay: 3
   }
 };

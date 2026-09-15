@@ -18,7 +18,12 @@ export async function generateAuthUrl(conversationId, shopId) {
   const responseType = "code";
 
   // Use the actual app URL for redirect
-  const redirectUri = process.env.REDIRECT_URL;
+  const redirectUri = "https://described-control-cosmetic-detroit.trycloudflare.com/callback";
+  console.log("========== AUTH URL DEBUG ==========");
+console.log("SHOPIFY_APP_URL:", process.env.SHOPIFY_APP_URL);
+console.log("REDIRECT_URL:", process.env.REDIRECT_URL);
+console.log("conversationId:", conversationId);
+console.log("====================================");
 
   // Include the conversation ID and shop ID in the state parameter for tracking
   const state = `${conversationId}-${shopId}`;

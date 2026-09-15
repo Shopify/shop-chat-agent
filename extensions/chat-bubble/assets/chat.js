@@ -481,7 +481,7 @@
             prompt_type: promptType
           });
 
-          const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://orange-conventions-current-avatar.trycloudflare.com';
+          const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://described-control-cosmetic-detroit.trycloudflare.com';
           const streamUrl = new URL('/chat', appBaseUrl).toString();
           const shopId = window.shopId;
 
@@ -781,7 +781,7 @@
           attemptCount++;
 
           try {
-            const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://orange-conventions-current-avatar.trycloudflare.com';
+            const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://described-control-cosmetic-detroit.trycloudflare.com';
             const tokenUrl = new URL(`/auth/token-status?conversation_id=${encodeURIComponent(conversationId)}`, appBaseUrl).toString();
             const response = await fetch(tokenUrl);
 

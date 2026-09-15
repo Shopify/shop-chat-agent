@@ -170,6 +170,20 @@ async function handleChatSession({
       } catch (e) {
         content = dbMessage.content;
       }
+
+      if (Array.isArray(content)) {
+        content = content.map((contentBlock) => {
+          if (contentBlock?.type !== 'tool_result') {
+            return contentBlock;
+          }
+
+          return {
+            ...contentBlock,
+            content: toolService.normalizeToolResultContent(contentBlock.content)
+          };
+        });
+      }
+
       return {
         role: dbMessage.role,
         content

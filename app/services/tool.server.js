@@ -123,7 +123,7 @@ export function createToolService() {
       content: [{
         type: "tool_result",
         tool_use_id: toolUseId,
-        content: content
+        content: normalizeToolResultContent(content)
       }]
     };
 
@@ -140,11 +140,38 @@ export function createToolService() {
     }
   };
 
+  const normalizeToolResultContent = (content) => {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (Array.isArray(content)) {
+      return content.map((block) => {
+        if (typeof block === 'string') {
+          return block;
+        }
+
+        if (block && block.type === 'text' && typeof block.text === 'string') {
+          return block.text;
+        }
+
+        return JSON.stringify(block);
+      }).join('\n');
+    }
+
+    if (content === undefined || content === null) {
+      return '';
+    }
+
+    return typeof content === 'object' ? JSON.stringify(content) : String(content);
+  };
+
   return {
     handleToolError,
     handleToolSuccess,
     processProductSearchResult,
-    addToolResultToHistory
+    addToolResultToHistory,
+    normalizeToolResultContent
   };
 }
 
