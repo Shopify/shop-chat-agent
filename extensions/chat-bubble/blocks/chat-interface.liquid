@@ -30,7 +30,7 @@
   </div>
 </div>
 
-<script src="{{ 'chat.js' | asset_url }}" defer></script>
+<script src="{{ 'chat.js' | asset_url }}" defer app_url="https://puts-ref-fantasy-physiology.trycloudflare.com"></script>
 <script>
   window.shopChatConfig = {
     promptType: {{ block.settings.system_prompt | json }},

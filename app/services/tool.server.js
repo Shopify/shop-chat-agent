@@ -19,14 +19,31 @@ export function createToolService() {
    * @param {Function} sendMessage - Function to send messages to the client
    * @param {string} conversationId - The conversation ID
    */
-  const handleToolError = async (toolUseResponse, toolName, toolUseId, conversationHistory, sendMessage, conversationId) => {
+  const handleToolError = async (
+    toolUseResponse,
+    toolName,
+    toolUseId,
+    conversationHistory,
+    sendMessage,
+    conversationId,
+  ) => {
     if (toolUseResponse.error.type === "auth_required") {
       console.log("Auth required for tool:", toolName);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
-      sendMessage({ type: 'auth_required' });
+      await addToolResultToHistory(
+        conversationHistory,
+        toolUseId,
+        toolUseResponse.error.data,
+        conversationId,
+      );
+      sendMessage({ type: "auth_required" });
     } else {
       console.log("Tool use error", toolUseResponse.error);
-      await addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.error.data, conversationId);
+      await addToolResultToHistory(
+        conversationHistory,
+        toolUseId,
+        toolUseResponse.error.data,
+        conversationId,
+      );
     }
   };
 
@@ -39,13 +56,25 @@ export function createToolService() {
    * @param {Array} productsToDisplay - Array to add product results to
    * @param {string} conversationId - The conversation ID
    */
-  const handleToolSuccess = async (toolUseResponse, toolName, toolUseId, conversationHistory, productsToDisplay, conversationId) => {
+  const handleToolSuccess = async (
+    toolUseResponse,
+    toolName,
+    toolUseId,
+    conversationHistory,
+    productsToDisplay,
+    conversationId,
+  ) => {
     // Check if this is a product search result
     if (toolName === AppConfig.tools.productSearchName) {
       productsToDisplay.push(...processProductSearchResult(toolUseResponse));
     }
 
-    addToolResultToHistory(conversationHistory, toolUseId, toolUseResponse.content, conversationId);
+    addToolResultToHistory(
+      conversationHistory,
+      toolUseId,
+      toolUseResponse.content,
+      conversationId,
+    );
   };
 
   /**
@@ -63,9 +92,9 @@ export function createToolService() {
 
         try {
           let responseData;
-          if (typeof content === 'object') {
+          if (typeof content === "object") {
             responseData = content;
-          } else if (typeof content === 'string') {
+          } else if (typeof content === "string") {
             responseData = JSON.parse(content);
           }
 
@@ -94,19 +123,24 @@ export function createToolService() {
    * @returns {Object} Formatted product data
    */
   const formatProductData = (product) => {
-    const price = product.price_range
-      ? `${product.price_range.currency} ${product.price_range.min}`
-      : (product.variants && product.variants.length > 0
-        ? `${product.variants[0].currency} ${product.variants[0].price}`
-        : 'Price not available');
+    console.log(product, "test");
+    const selectedVariant = product.variants?.[0];
+
+    const price = selectedVariant?.price
+      ? new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: selectedVariant.price.currency,
+          maximumFractionDigits: 2,
+        }).format(selectedVariant.price.amount)
+      : "Price not available";
 
     return {
-      id: product.product_id || `product-${Math.random().toString(36).substring(7)}`,
-      title: product.title || 'Product',
-      price: price,
-      image_url: product.image_url || '',
-      description: product.description || '',
-      url: product.url || ''
+      id: product.id || `product-${Math.random().toString(36).substring(7)}`,
+      title: product.title || "Product",
+      price,
+      image_url: selectedVariant?.media?.[0]?.url || "",
+      description: product.description?.html || "",
+      url: product.url || "",
     };
   };
 
@@ -117,21 +151,27 @@ export function createToolService() {
    * @param {string} content - The content of the tool result
    * @param {string} conversationId - The conversation ID
    */
-  const addToolResultToHistory = async (conversationHistory, toolUseId, content, conversationId) => {
+  const addToolResultToHistory = async (
+    conversationHistory,
+    toolUseId,
+    content,
+    conversationId,
+  ) => {
     const toolResultBlock = {
       type: "tool_result",
       tool_use_id: toolUseId,
-      content: normalizeToolResultContent(content)
+      content: normalizeToolResultContent(content),
     };
 
     const previousMessage = conversationHistory[conversationHistory.length - 1];
-    const canAppendToPrevious = previousMessage?.role === 'user' &&
+    const canAppendToPrevious =
+      previousMessage?.role === "user" &&
       Array.isArray(previousMessage.content) &&
-      previousMessage.content.every((block) => block?.type === 'tool_result');
+      previousMessage.content.every((block) => block?.type === "tool_result");
 
     const toolResultMessage = canAppendToPrevious
       ? previousMessage
-      : { role: 'user', content: [] };
+      : { role: "user", content: [] };
 
     toolResultMessage.content.push(toolResultBlock);
 
@@ -146,37 +186,49 @@ export function createToolService() {
         const contentToSave = canAppendToPrevious
           ? [toolResultBlock]
           : toolResultMessage.content;
-        await saveMessage(conversationId, 'user', JSON.stringify(contentToSave));
+        await saveMessage(
+          conversationId,
+          "user",
+          JSON.stringify(contentToSave),
+        );
       } catch (error) {
-        console.error('Error saving tool result to database:', error);
+        console.error("Error saving tool result to database:", error);
       }
     }
   };
 
   const normalizeToolResultContent = (content) => {
-    if (typeof content === 'string') {
+    if (typeof content === "string") {
       return content;
     }
 
     if (Array.isArray(content)) {
-      return content.map((block) => {
-        if (typeof block === 'string') {
-          return block;
-        }
+      return content
+        .map((block) => {
+          if (typeof block === "string") {
+            return block;
+          }
 
-        if (block && block.type === 'text' && typeof block.text === 'string') {
-          return block.text;
-        }
+          if (
+            block &&
+            block.type === "text" &&
+            typeof block.text === "string"
+          ) {
+            return block.text;
+          }
 
-        return JSON.stringify(block);
-      }).join('\n');
+          return JSON.stringify(block);
+        })
+        .join("\n");
     }
 
     if (content === undefined || content === null) {
-      return '';
+      return "";
     }
 
-    return typeof content === 'object' ? JSON.stringify(content) : String(content);
+    return typeof content === "object"
+      ? JSON.stringify(content)
+      : String(content);
   };
 
   return {
@@ -184,10 +236,10 @@ export function createToolService() {
     handleToolSuccess,
     processProductSearchResult,
     addToolResultToHistory,
-    normalizeToolResultContent
+    normalizeToolResultContent,
   };
 }
 
 export default {
-  createToolService
+  createToolService,
 };

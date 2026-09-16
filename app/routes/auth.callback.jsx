@@ -99,7 +99,7 @@ async function exchangeCodeForToken(code, state) {
     throw new Error("SHOPIFY_API_KEY/SHOPIFY_CLIENT_ID and shop state are required");
   }
 
-  const redirectUri = process.env.REDIRECT_URL || process.env.SHOPIFY_APP_URL + "/callback";
+  const redirectUri = process.env.REDIRECT_URLS || process.env.SHOPIFY_APP_URL + "/callback";
 
   // Correct token URL format
   const tokenUrl = await getTokenUrl(conversationId);

@@ -10,6 +10,10 @@
   /**
    * Application namespace to prevent global scope pollution
    */
+const script = document.currentScript;
+
+const ShopifyAppURL = script.attributes.app_url.value;
+
   const ShopAIChat = {
     /**
      * UI-related elements and functionality
@@ -189,6 +193,7 @@
        * @param {Array} products - Array of product data objects
        */
       displayProductResults: function(products) {
+        console.log(products, 'produc')
         const { messagesContainer } = this.elements;
 
         // Create a wrapper for the product section
@@ -481,7 +486,7 @@
             prompt_type: promptType
           });
 
-          const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://described-control-cosmetic-detroit.trycloudflare.com';
+          const appBaseUrl = window.shopChatConfig?.appBaseUrl || ShopifyAppURL;
           const streamUrl = new URL('/chat', appBaseUrl).toString();
           const shopId = window.shopId;
 
@@ -631,7 +636,7 @@
           messagesContainer.appendChild(loadingMessage);
 
           // Fetch history from the server
-          const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://orange-conventions-current-avatar.trycloudflare.com';
+          const appBaseUrl = window.shopChatConfig?.appBaseUrl || ShopifyAppURL;
           const historyUrl = new URL(`/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`, appBaseUrl).toString();
           console.log('Fetching history from:', historyUrl);
 
@@ -779,9 +784,8 @@
           }
 
           attemptCount++;
-
           try {
-            const appBaseUrl = window.shopChatConfig?.appBaseUrl || 'https://described-control-cosmetic-detroit.trycloudflare.com';
+            const appBaseUrl = window.shopChatConfig?.appBaseUrl || ShopifyAppURL;
             const tokenUrl = new URL(`/auth/token-status?conversation_id=${encodeURIComponent(conversationId)}`, appBaseUrl).toString();
             const response = await fetch(tokenUrl);
 
@@ -831,6 +835,7 @@
        * @returns {HTMLElement} Product card element
        */
       createCard: function(product) {
+        console.log(product, 'prod')
         const card = document.createElement('div');
         card.classList.add('shop-ai-product-card');
 
@@ -879,7 +884,7 @@
         // Add add-to-cart button
         const button = document.createElement('button');
         button.classList.add('shop-ai-add-to-cart');
-        button.textContent = 'Add to Cart';
+        button.textContent = 'Add Cart';
         button.dataset.productId = product.id;
 
         // Add click handler for the button

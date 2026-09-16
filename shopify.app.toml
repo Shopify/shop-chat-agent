@@ -2,23 +2,27 @@
 
 client_id = "bffe8f1e67a53b13480a07c22eac4f0f"
 name = "shop-chat-agent"
-application_url = "https://described-control-cosmetic-detroit.trycloudflare.com"
+application_url = "https://puts-ref-fantasy-physiology.trycloudflare.com"
 embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2026-10"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "unauthenticated_read_product_listings"
+scopes = "read_customers,write_customers,unauthenticated_read_product_listings,read_products,read_orders"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://described-control-cosmetic-detroit.trycloudflare.com/api/auth" ]
+redirect_urls = [
+  "https://puts-ref-fantasy-physiology.trycloudflare.com/api/auth"
+]
 
 [customer_authentication]
 redirect_uris = [
-  "https://described-control-cosmetic-detroit.trycloudflare.com/callback"
+  "https://puts-ref-fantasy-physiology.trycloudflare.com/callback"
 ]
-
-[build]
-automatically_update_urls_on_dev = true
