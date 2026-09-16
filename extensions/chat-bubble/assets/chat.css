@@ -22,6 +22,18 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transition: transform 0.3s ease;
   }
+
+  .shop-ai-chat-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 9998;
+    display: none;
+  }
+
+  .shop-ai-chat-overlay.active {
+    display: block;
+  }
   
   @media (max-width: 480px) {
     .shop-ai-chat-bubble {

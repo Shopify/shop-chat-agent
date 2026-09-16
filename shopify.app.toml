@@ -2,7 +2,7 @@
 
 client_id = "bffe8f1e67a53b13480a07c22eac4f0f"
 name = "shop-chat-agent"
-application_url = "https://unsigned-keys-forest-dated.trycloudflare.com"
+application_url = "https://minute-polo-objectives-forty.trycloudflare.com"
 embedded = true
 
 [build]
@@ -19,10 +19,10 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://unsigned-keys-forest-dated.trycloudflare.com/api/auth"
+  "https://minute-polo-objectives-forty.trycloudflare.com/api/auth"
 ]
 
 [customer_authentication]
 redirect_uris = [
-  "https://unsigned-keys-forest-dated.trycloudflare.com/callback"
+  "https://minute-polo-objectives-forty.trycloudflare.com/callback"
 ]

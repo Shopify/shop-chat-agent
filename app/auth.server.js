@@ -18,10 +18,10 @@ export async function generateAuthUrl(conversationId, shopId) {
   const responseType = "code";
 
   // Use the actual app URL for redirect
-  const redirectUri = "https://puts-ref-fantasy-physiology.trycloudflare.com/callback";
+  const redirectUri = process.env.SHOPIFY_APP_URL + "/callback";
   console.log("========== AUTH URL DEBUG ==========");
 console.log("SHOPIFY_APP_URL:", process.env.SHOPIFY_APP_URL);
-console.log("REDIRECT_URLS:", process.env.REDIRECT_URLS);
+console.log("REDIRECT_U:", redirectUri);
 console.log("conversationId:", conversationId);
 console.log("====================================");
 

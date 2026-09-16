@@ -141,6 +141,7 @@ export function createToolService() {
       image_url: selectedVariant?.media?.[0]?.url || "",
       description: product.description?.html || "",
       url: product.url || "",
+      variantId: selectedVariant?.id?.split("/").pop() ?? "",
     };
   };
 
