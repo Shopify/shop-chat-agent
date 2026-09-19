@@ -348,8 +348,7 @@
 
         const toolText = document.createElement("span");
         toolText.classList.add("shop-ai-tool-text");
-        toolText.textContent = `Calling tool: ${toolName}`;
-
+        
         const toggleElement = document.createElement("span");
         toggleElement.classList.add("shop-ai-tool-toggle");
         toggleElement.textContent = "[+]";
