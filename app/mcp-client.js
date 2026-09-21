@@ -1,7 +1,27 @@
 import { generateAuthUrl } from "./auth.server";
 import { getCustomerToken } from "./db.server";
+import { createDelhiveryClient } from "./services/delhivery.server";
 
 const UCP_AGENT_PROFILE = "https://shopify.dev/ucp/agent-profiles/examples/2026-08-25/valid-with-capabilities.json";
+
+// Delhivery tool names are namespaced before being handed to Claude so they
+// cannot collide with Shopify storefront, catalog or customer tool names.
+const DELHIVERY_TOOL_PREFIX = "delhivery_";
+
+// One client per process: it caches the OAuth token and the MCP session.
+let delhiveryClient;
+
+/**
+ * Returns the shared Delhivery MCP client, creating it on first use.
+ * @returns {Object|null} Client instance, or null when not configured
+ */
+function getDelhiveryClient() {
+  if (delhiveryClient === undefined) {
+    delhiveryClient = createDelhiveryClient();
+  }
+
+  return delhiveryClient;
+}
 
 /**
  * Client for interacting with Model Context Protocol (MCP) API endpoints.
@@ -20,6 +40,7 @@ class MCPClient {
     this.customerTools = [];
     this.storefrontTools = [];
     this.catalogTools = [];
+    this.delhiveryTools = [];
     // TODO: Make this dynamic, for that first we need to allow access of mcp tools on password proteted demo stores.
     this.storefrontMcpEndpoint = `${hostUrl}/api/mcp`;
     this.catalogMcpEndpoint = `${hostUrl}/api/ucp/mcp`;
@@ -146,6 +167,78 @@ class MCPClient {
   }
 
   /**
+   * Connects to the Delhivery One MCP server and retrieves shipment tracking tools.
+   * Skipped silently when the Delhivery credentials are not configured.
+   *
+   * @returns {Promise<Array>} Array of available Delhivery tools
+   */
+  async connectToDelhiveryServer() {
+    const client = getDelhiveryClient();
+
+    if (!client) {
+      console.log("Delhivery MCP not configured, skipping");
+      return [];
+    }
+
+    try {
+      console.log("Connecting to Delhivery One MCP server");
+
+      const toolsData = await client.listTools();
+
+      // Namespace the names so they cannot clash with Shopify tools.
+      const delhiveryTools = this._formatToolsData(toolsData).map((tool) => ({
+        ...tool,
+        name: `${DELHIVERY_TOOL_PREFIX}${tool.name}`,
+      }));
+
+      this.delhiveryTools = delhiveryTools;
+      this.tools = [...this.tools, ...delhiveryTools];
+
+      return delhiveryTools;
+    } catch (error) {
+      console.warn("Failed to connect to Delhivery MCP server:", error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Calls a tool on the Delhivery One MCP server.
+   *
+   * @param {string} toolName - Namespaced name of the Delhivery tool
+   * @param {Object} toolArgs - Arguments to pass to the tool
+   * @returns {Promise<Object>} Result from the tool call, or an error envelope
+   */
+  async callDelhiveryTool(toolName, toolArgs) {
+    const client = getDelhiveryClient();
+
+    if (!client) {
+      return {
+        error: {
+          type: "internal_error",
+          data: "Delhivery tracking is not configured for this store.",
+        },
+      };
+    }
+
+    try {
+      console.log("Calling Delhivery tool", toolName, toolArgs);
+
+      // Strip the namespace before sending the name upstream.
+      const remoteToolName = toolName.slice(DELHIVERY_TOOL_PREFIX.length);
+
+      return await client.callTool(remoteToolName, toolArgs);
+    } catch (error) {
+      console.error(`Error calling Delhivery tool ${toolName}:`, error);
+      return {
+        error: {
+          type: "internal_error",
+          data: `Could not reach the Delhivery tracking dashboard: ${error.message}`,
+        },
+      };
+    }
+  }
+
+  /**
    * Dispatches a tool call to the appropriate MCP server based on the tool name.
    *
    * @param {string} toolName - Name of the tool to call
@@ -154,7 +247,9 @@ class MCPClient {
    * @throws {Error} If tool is not found or call fails
    */
   async callTool(toolName, toolArgs) {
-    if (this.customerTools.some(tool => tool.name === toolName)) {
+    if (this.delhiveryTools.some(tool => tool.name === toolName)) {
+      return this.callDelhiveryTool(toolName, toolArgs);
+    } else if (this.customerTools.some(tool => tool.name === toolName)) {
       return this.callCustomerTool(toolName, toolArgs);
     } else if (this.catalogTools.some(tool => tool.name === toolName)) {
       return this.callCatalogTool(toolName, toolArgs);

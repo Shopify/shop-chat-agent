@@ -154,6 +154,11 @@ async function handleChatSession({
       console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
     }
 
+    // Connected separately so shipment tracking stays available even when a
+    // Shopify MCP endpoint is down (the calls above throw on failure).
+    const delhiveryMcpTools = await mcpClient.connectToDelhiveryServer();
+    console.log(`Connected to Delhivery MCP with ${delhiveryMcpTools.length} tools`);
+
     // Prepare conversation state
     let conversationHistory = [];
     let productsToDisplay = [];

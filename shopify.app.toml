@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "bffe8f1e67a53b13480a07c22eac4f0f"
+client_id = "7f52c9153dfd83c8fa233f9cfb2a2700"
 name = "shop-chat-agent"
 application_url = "https://shopify-chat-app.onrender.com"
 embedded = true
