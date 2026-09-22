@@ -39,7 +39,9 @@ When you start the app, it will:
 - Tunnel your local server so Shopify can reach it.
 - Provide a preview URL to install the app on your development store.
 
-For direct testing, point your test suite at the `/chat` endpoint (GET or POST for streaming).
+For direct testing, point your test suite at the `/chat` endpoint (GET or POST for streaming). Requests must carry an `Origin` header matching a shop the app is installed on (`https://<shop>.myshopify.com`); anything else is rejected with `403`.
+
+Run the automated tests with `npm test`.
 
 ### MCP Tools Integration
 - The backend already initializes all Shopify MCP tools—see [`app/mcp-client.js`](./app/mcp-client.js).

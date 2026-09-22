@@ -14,9 +14,11 @@ export default prisma;
  * Store a code verifier for PKCE authentication
  * @param {string} state - The state parameter used in OAuth flow
  * @param {string} verifier - The code verifier to store
+ * @param {string} conversationId - The conversation that initiated the flow
+ * @param {string} shopOrigin - Storefront origin allowed to receive the result
  * @returns {Promise<Object>} - The saved code verifier object
  */
-export async function storeCodeVerifier(state, verifier) {
+export async function storeCodeVerifier(state, verifier, conversationId, shopOrigin) {
   // Calculate expiration date (10 minutes from now)
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + 10);
@@ -27,6 +29,8 @@ export async function storeCodeVerifier(state, verifier) {
         id: `cv_${Date.now()}`,
         state,
         verifier,
+        conversationId,
+        shopOrigin,
         expiresAt
       }
     });
@@ -132,6 +136,32 @@ export async function getCustomerToken(conversationId) {
     console.error('Error retrieving customer token:', error);
     return null;
   }
+}
+
+export async function resolveConversationId(requestedId) {
+  if (requestedId) {
+    const existing = await prisma.conversation.findUnique({ where: { id: requestedId } });
+    if (existing) return existing.id;
+  }
+
+  return crypto.randomUUID();
+}
+
+/**
+ * Moves a conversation and everything keyed by it to a fresh id.
+ * Used after OAuth so a token never lands in the conversation whose id started the flow.
+ * @returns {Promise<string>} The new conversation id
+ */
+export async function rotateConversation(conversationId) {
+  const newId = crypto.randomUUID();
+
+  await prisma.$transaction([
+    prisma.conversation.update({ where: { id: conversationId }, data: { id: newId } }),
+    prisma.customerAccountUrls.updateMany({ where: { conversationId }, data: { conversationId: newId } }),
+    prisma.customerToken.deleteMany({ where: { conversationId } }),
+  ]);
+
+  return newId;
 }
 
 /**

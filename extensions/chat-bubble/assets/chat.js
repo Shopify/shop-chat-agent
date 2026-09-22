@@ -464,6 +464,8 @@
      * API communication and data handling
      */
     API: {
+      CHAT_URL: 'https://localhost:3458/chat',
+
       /**
        * Stream a response from the API
        * @param {string} userMessage - User's message text
@@ -481,15 +483,13 @@
             prompt_type: promptType
           });
 
-          const streamUrl = 'https://localhost:3458/chat';
-          const shopId = window.shopId;
+          const streamUrl = this.CHAT_URL;
 
           const response = await fetch(streamUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'text/event-stream',
-              'X-Shopify-Shop-Id': shopId
+              'Accept': 'text/event-stream'
             },
             body: requestBody
           });
@@ -630,7 +630,7 @@
           messagesContainer.appendChild(loadingMessage);
 
           // Fetch history from the server
-          const historyUrl = `https://localhost:3458/chat?history=true&conversation_id=${encodeURIComponent(conversationId)}`;
+          const historyUrl = `${this.CHAT_URL}?history=true&conversation_id=${encodeURIComponent(conversationId)}`;
           console.log('Fetching history from:', historyUrl);
 
           const response = await fetch(historyUrl, {
@@ -737,85 +737,40 @@
           alert('Please allow popups for this site to authenticate with Shopify.');
         }
 
-        // Start polling for token availability
-        const conversationId = sessionStorage.getItem('shopAiConversationId');
-        if (conversationId) {
-          const messagesContainer = document.querySelector('.shop-ai-chat-messages');
+        const messagesContainer = document.querySelector('.shop-ai-chat-messages');
+        ShopAIChat.Message.add("Authentication in progress. Please complete the process in the popup window.",
+          'assistant', messagesContainer);
 
-          // Add a message to indicate authentication is in progress
-          ShopAIChat.Message.add("Authentication in progress. Please complete the process in the popup window.",
-            'assistant', messagesContainer);
-
-          this.startTokenPolling(conversationId, messagesContainer);
-        }
+        this.listenForAuthComplete(messagesContainer);
       },
 
       /**
-       * Start polling for token availability
-       * @param {string} conversationId - Conversation ID
+       * Waits for the auth popup to hand back the re-keyed conversation id, then resumes.
        * @param {HTMLElement} messagesContainer - The messages container
        */
-      startTokenPolling: function(conversationId, messagesContainer) {
-        if (!conversationId) return;
+      listenForAuthComplete: function(messagesContainer) {
+        const appOrigin = new URL(ShopAIChat.API.CHAT_URL).origin;
 
-        console.log('Starting token polling for conversation:', conversationId);
-        const pollingId = 'polling_' + Date.now();
-        sessionStorage.setItem('shopAiTokenPollingId', pollingId);
+        const onMessage = (event) => {
+          if (event.origin !== appOrigin) return;
+          if (!event.data || event.data.type !== 'shop-ai-auth-complete') return;
 
-        let attemptCount = 0;
-        const maxAttempts = 30;
+          window.removeEventListener('message', onMessage);
 
-        const poll = async () => {
-          if (sessionStorage.getItem('shopAiTokenPollingId') !== pollingId) {
-            console.log('Another polling session has started, stopping this one');
-            return;
-          }
+          const conversationId = event.data.conversation_id;
+          sessionStorage.setItem('shopAiConversationId', conversationId);
 
-          if (attemptCount >= maxAttempts) {
-            console.log('Max polling attempts reached, stopping');
-            return;
-          }
+          const message = sessionStorage.getItem('shopAiLastMessage');
+          if (!message) return;
+          sessionStorage.removeItem('shopAiLastMessage');
 
-          attemptCount++;
-
-          try {
-            const tokenUrl = 'https://localhost:3458/auth/token-status?conversation_id=' +
-              encodeURIComponent(conversationId);
-            const response = await fetch(tokenUrl);
-
-            if (!response.ok) {
-              throw new Error('Token status check failed: ' + response.status);
-            }
-
-            const data = await response.json();
-
-            if (data.status === 'authorized') {
-              console.log('Token available, resuming conversation');
-              const message = sessionStorage.getItem('shopAiLastMessage');
-
-              if (message) {
-                sessionStorage.removeItem('shopAiLastMessage');
-                setTimeout(() => {
-                  ShopAIChat.Message.add("Authorization successful! I'm now continuing with your request.",
-                    'assistant', messagesContainer);
-                  ShopAIChat.API.streamResponse(message, conversationId, messagesContainer);
-                  ShopAIChat.UI.showTypingIndicator();
-                }, 500);
-              }
-
-              sessionStorage.removeItem('shopAiTokenPollingId');
-              return;
-            }
-
-            console.log('Token not available yet, polling again in 10s');
-            setTimeout(poll, 10000);
-          } catch (error) {
-            console.error('Error polling for token status:', error);
-            setTimeout(poll, 10000);
-          }
+          ShopAIChat.Message.add("Authorization successful! I'm now continuing with your request.",
+            'assistant', messagesContainer);
+          ShopAIChat.API.streamResponse(message, conversationId, messagesContainer);
+          ShopAIChat.UI.showTypingIndicator();
         };
 
-        setTimeout(poll, 2000);
+        window.addEventListener('message', onMessage);
       }
     },
 
