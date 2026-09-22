@@ -134,6 +134,15 @@ export async function getCustomerToken(conversationId) {
   }
 }
 
+export async function resolveConversationId(requestedId) {
+  if (requestedId) {
+    const existing = await prisma.conversation.findUnique({ where: { id: requestedId } });
+    if (existing) return existing.id;
+  }
+
+  return crypto.randomUUID();
+}
+
 /**
  * Create or update a conversation in the database
  * @param {string} conversationId - The conversation ID

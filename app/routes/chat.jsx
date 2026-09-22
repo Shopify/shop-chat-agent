@@ -3,7 +3,7 @@
  * Handles chat interactions with Claude API and tools
  */
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory } from "../db.server";
+import { saveMessage, getConversationHistory, resolveConversationId } from "../db.server";
 import { resolveInstalledShopOrigin } from "../services/shop-origin.server";
 import { getCustomerAccountUrls } from "../services/customer-account.server";
 import AppConfig from "../services/config.server";
@@ -88,8 +88,8 @@ async function handleChatRequest(request, shopOrigin) {
       );
     }
 
-    // Generate or use existing conversation ID
-    const conversationId = body.conversation_id || Date.now().toString();
+    // Only continue conversations this server issued; anything else gets a fresh unguessable id
+    const conversationId = await resolveConversationId(body.conversation_id);
     const promptType = body.prompt_type || AppConfig.api.defaultPromptType;
 
     // Create a stream for the response
