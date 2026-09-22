@@ -5,9 +5,10 @@
 /**
  * Generate authorization URL for the customer
  * @param {string} conversationId - The conversation ID to track the auth flow
+ * @param {string} shopOrigin - Storefront origin that will receive the auth result
  * @returns {Promise<Object>} - Object containing the auth URL and conversation ID
  */
-export async function generateAuthUrl(conversationId, shopId) {
+export async function generateAuthUrl(conversationId, shopOrigin) {
   const { storeCodeVerifier } = await import('./db.server');
 
   // Generate authorization URL for the customer
@@ -18,19 +19,14 @@ export async function generateAuthUrl(conversationId, shopId) {
   // Use the actual app URL for redirect
   const redirectUri = process.env.REDIRECT_URL;
 
-  // Include the conversation ID and shop ID in the state parameter for tracking
-  const state = `${conversationId}-${shopId}`;
+  // Opaque, single-use; the conversation is bound server-side so the callback never trusts the URL
+  const state = crypto.randomUUID();
 
   // Generate code verifier and challenge
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
 
-  // Store the code verifier in the database
-  try {
-    await storeCodeVerifier(state, verifier);
-  } catch (error) {
-    console.error('Failed to store code verifier:', error);
-  }
+  await storeCodeVerifier(state, verifier, conversationId, shopOrigin);
 
   // Set code_challenge and code_challenge_method parameters
   const codeChallengeMethod = "S256";

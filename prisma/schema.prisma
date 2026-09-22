@@ -47,6 +47,8 @@ model CodeVerifier {
   id              String    @id
   state           String    @unique
   verifier        String
+  conversationId  String
+  shopOrigin      String
   createdAt       DateTime  @default(now())
   expiresAt       DateTime
 

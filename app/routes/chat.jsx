@@ -3,7 +3,9 @@
  * Handles chat interactions with Claude API and tools
  */
 import MCPClient from "../mcp-client";
-import { saveMessage, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
+import { saveMessage, getConversationHistory, resolveConversationId } from "../db.server";
+import { resolveInstalledShopOrigin } from "../services/shop-origin.server";
+import { getCustomerAccountUrls } from "../services/customer-account.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
@@ -14,11 +16,14 @@ import { createToolService } from "../services/tool.server";
  * Rract Router loader function for handling GET requests
  */
 export async function loader({ request }) {
+  const shopOrigin = await resolveInstalledShopOrigin(request);
+  if (!shopOrigin) return forbidden();
+
   // Handle OPTIONS requests (CORS preflight)
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
-      headers: getCorsHeaders(request)
+      headers: getCorsHeaders(request, shopOrigin)
     });
   }
 
@@ -26,23 +31,30 @@ export async function loader({ request }) {
 
   // Handle history fetch requests - matches /chat?history=true&conversation_id=XYZ
   if (url.searchParams.has('history') && url.searchParams.has('conversation_id')) {
-    return handleHistoryRequest(request, url.searchParams.get('conversation_id'));
+    return handleHistoryRequest(request, shopOrigin, url.searchParams.get('conversation_id'));
   }
 
   // Handle SSE requests
   if (!url.searchParams.has('history') && request.headers.get("Accept") === "text/event-stream") {
-    return handleChatRequest(request);
+    return handleChatRequest(request, shopOrigin);
   }
 
   // API-only: reject all other requests
-  return new Response(JSON.stringify({ error: AppConfig.errorMessages.apiUnsupported }), { status: 400, headers: getCorsHeaders(request) });
+  return new Response(JSON.stringify({ error: AppConfig.errorMessages.apiUnsupported }), { status: 400, headers: getCorsHeaders(request, shopOrigin) });
 }
 
 /**
  * React Router action function for handling POST requests
  */
 export async function action({ request }) {
-  return handleChatRequest(request);
+  const shopOrigin = await resolveInstalledShopOrigin(request);
+  if (!shopOrigin) return forbidden();
+
+  return handleChatRequest(request, shopOrigin);
+}
+
+function forbidden() {
+  return new Response(JSON.stringify({ error: AppConfig.errorMessages.unknownShop }), { status: 403 });
 }
 
 /**
@@ -51,10 +63,10 @@ export async function action({ request }) {
  * @param {string} conversationId - The conversation ID
  * @returns {Response} JSON response with chat history
  */
-async function handleHistoryRequest(request, conversationId) {
+async function handleHistoryRequest(request, shopOrigin, conversationId) {
   const messages = await getConversationHistory(conversationId);
 
-  return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request) });
+  return new Response(JSON.stringify({ messages }), { headers: getCorsHeaders(request, shopOrigin) });
 }
 
 /**
@@ -62,7 +74,7 @@ async function handleHistoryRequest(request, conversationId) {
  * @param {Request} request - The request object
  * @returns {Response} Server-sent events stream
  */
-async function handleChatRequest(request) {
+async function handleChatRequest(request, shopOrigin) {
   try {
     // Get message data from request body
     const body = await request.json();
@@ -72,18 +84,18 @@ async function handleChatRequest(request) {
     if (!userMessage) {
       return new Response(
         JSON.stringify({ error: AppConfig.errorMessages.missingMessage }),
-        { status: 400, headers: getSseHeaders(request) }
+        { status: 400, headers: getSseHeaders(shopOrigin) }
       );
     }
 
-    // Generate or use existing conversation ID
-    const conversationId = body.conversation_id || Date.now().toString();
+    // Only continue conversations this server issued; anything else gets a fresh unguessable id
+    const conversationId = await resolveConversationId(body.conversation_id);
     const promptType = body.prompt_type || AppConfig.api.defaultPromptType;
 
     // Create a stream for the response
     const responseStream = createSseStream(async (stream) => {
       await handleChatSession({
-        request,
+        shopOrigin,
         userMessage,
         conversationId,
         promptType,
@@ -92,13 +104,13 @@ async function handleChatRequest(request) {
     });
 
     return new Response(responseStream, {
-      headers: getSseHeaders(request)
+      headers: getSseHeaders(shopOrigin)
     });
   } catch (error) {
     console.error('Error in chat request handler:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: getCorsHeaders(request)
+      headers: getCorsHeaders(request, shopOrigin)
     });
   }
 }
@@ -106,14 +118,14 @@ async function handleChatRequest(request) {
 /**
  * Handle a complete chat session
  * @param {Object} params - Session parameters
- * @param {Request} params.request - The request object
+ * @param {string} params.shopOrigin - Origin of the installed shop making the request
  * @param {string} params.userMessage - The user's message
  * @param {string} params.conversationId - The conversation ID
  * @param {string} params.promptType - The prompt type
  * @param {Object} params.stream - Stream manager for sending responses
  */
 async function handleChatSession({
-  request,
+  shopOrigin,
   userMessage,
   conversationId,
   promptType,
@@ -124,16 +136,9 @@ async function handleChatSession({
   const toolService = createToolService();
 
   // Initialize MCP client
-  const shopId = request.headers.get("X-Shopify-Shop-Id");
-  const shopDomain = request.headers.get("Origin");
-  const { mcpApiUrl } = await getCustomerAccountUrls(shopDomain, conversationId);
+  const { mcpApiUrl } = (await getCustomerAccountUrls(shopOrigin, conversationId)) ?? {};
 
-  const mcpClient = new MCPClient(
-    shopDomain,
-    conversationId,
-    shopId,
-    mcpApiUrl,
-  );
+  const mcpClient = new MCPClient(shopOrigin, conversationId, mcpApiUrl);
 
   try {
     // Send conversation ID to client
@@ -282,60 +287,16 @@ async function handleChatSession({
 }
 
 /**
- * Get the customer MCP API URL for a shop
- * @param {string} shopDomain - The shop domain
- * @param {string} conversationId - The conversation ID
- * @returns {string} The customer MCP API URL
- */
-async function getCustomerAccountUrls(shopDomain, conversationId) {
-  try {
-    // Check if the customer account URL exists in the DB
-    const existingUrls = await getCustomerAccountUrlsFromDb(conversationId);
-
-    // If URL exists, return early with the MCP API URL
-    if (existingUrls) return existingUrls;
-
-    // If not, query for it from the Shopify API
-    const { hostname } = new URL(shopDomain);
-
-    const urls = await Promise.all([
-      fetch(`https://${hostname}/.well-known/customer-account-api`).then(res => res.json()),
-      fetch(`https://${hostname}/.well-known/openid-configuration`).then(res => res.json()),
-    ]).then(async ([mcpResponse, openidResponse]) => {
-      const response = {
-        mcpApiUrl: mcpResponse.mcp_api,
-        authorizationUrl: openidResponse.authorization_endpoint,
-        tokenUrl: openidResponse.token_endpoint,
-      };
-
-      await storeCustomerAccountUrls({
-        conversationId,
-        mcpApiUrl: mcpResponse.mcp_api,
-        authorizationUrl: openidResponse.authorization_endpoint,
-        tokenUrl: openidResponse.token_endpoint,
-      });
-
-      return response;
-    });
-
-    return urls;
-  } catch (error) {
-    console.error("Error getting customer MCP API URL:", error);
-    return null;
-  }
-}
-
-/**
  * Gets CORS headers for the response
  * @param {Request} request - The request object
+ * @param {string} shopOrigin - Origin of the installed shop making the request
  * @returns {Object} CORS headers object
  */
-function getCorsHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
+function getCorsHeaders(request, shopOrigin) {
   const requestHeaders = request.headers.get("Access-Control-Request-Headers") || "Content-Type, Accept";
 
   return {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": shopOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": requestHeaders,
     "Access-Control-Allow-Credentials": "true",
@@ -345,18 +306,16 @@ function getCorsHeaders(request) {
 
 /**
  * Get SSE headers for the response
- * @param {Request} request - The request object
+ * @param {string} shopOrigin - Origin of the installed shop making the request
  * @returns {Object} SSE headers object
  */
-function getSseHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
-
+function getSseHeaders(shopOrigin) {
   return {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     "Connection": "keep-alive",
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": shopOrigin,
     "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
     "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
   };

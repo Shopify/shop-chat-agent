@@ -15,6 +15,7 @@ export const AppConfig = {
   errorMessages: {
     missingMessage: "Message is required",
     apiUnsupported: "This endpoint only supports server-sent events (SSE) requests or history requests.",
+    unknownShop: "Origin does not match an installed shop",
     authFailed: "Authentication failed with Claude API",
     apiKeyError: "Please check your API key in environment variables",
     rateLimitExceeded: "Rate limit exceeded",
