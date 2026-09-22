@@ -11,9 +11,8 @@ class MCPClient {
    *
    * @param {string} hostUrl - The base URL for the shop
    * @param {string} conversationId - ID for the current conversation
-   * @param {string} shopId - ID of the Shopify shop
    */
-  constructor(hostUrl, conversationId, shopId, customerMcpEndpoint) {
+  constructor(hostUrl, conversationId, customerMcpEndpoint) {
     this.tools = [];
     this.customerTools = [];
     this.storefrontTools = [];
@@ -24,7 +23,7 @@ class MCPClient {
     this.customerMcpEndpoint = customerMcpEndpoint || `${accountHostUrl}/customer/api/mcp`;
     this.customerAccessToken = "";
     this.conversationId = conversationId;
-    this.shopId = shopId;
+    this.shopOrigin = hostUrl;
   }
 
   /**
@@ -211,7 +210,7 @@ class MCPClient {
           console.log("Unauthorized, generating authorization URL for customer");
 
           // Generate auth URL
-          const authResponse = await generateAuthUrl(this.conversationId, this.shopId);
+          const authResponse = await generateAuthUrl(this.conversationId, this.shopOrigin);
 
           // Instead of retrying, return the auth URL for the front-end
           return {
