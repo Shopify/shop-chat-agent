@@ -1,4 +1,4 @@
-import { getCodeVerifier, storeCustomerToken, getCustomerAccountUrls } from "../db.server";
+import { getCodeVerifier, storeCustomerToken, getCustomerAccountUrls, rotateConversation } from "../db.server";
 
 /**
  * Handle OAuth callback from Shopify Customer API
@@ -7,43 +7,107 @@ export async function loader({ request }) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const [conversationId, shopId] = state.split("-");
 
   if (!code) {
     return new Response(JSON.stringify({ error: "Authorization code is missing" }), { status: 400 });
   }
 
+  const pending = state ? await getCodeVerifier(state) : null;
+  if (!pending) {
+    return new Response(JSON.stringify({ error: "Unknown or expired authorization state" }), { status: 400 });
+  }
+
   try {
-    // Exchange code for access token
-    const tokenResponse = await exchangeCodeForToken(code, state);
+    const tokenResponse = await exchangeCodeForToken(code, pending);
 
-    // Store token in database
-    try {
-      // Calculate expiration date based on expires_in (seconds)
-      const expiresAt = new Date();
-      expiresAt.setSeconds(expiresAt.getSeconds() + tokenResponse.expires_in);
+    const expiresAt = new Date();
+    expiresAt.setSeconds(expiresAt.getSeconds() + tokenResponse.expires_in);
 
-      // Store in database with conversation ID
-      await storeCustomerToken(
-        conversationId,
-        tokenResponse.access_token,
-        expiresAt
-      );
+    // Re-key the conversation so whoever started the flow with the old id cannot use this token
+    const conversationId = await rotateConversation(pending.conversationId);
+    await storeCustomerToken(conversationId, tokenResponse.access_token, expiresAt);
 
-      console.log('Stored customer token in database for conversation:', conversationId);
-    } catch (error) {
-      console.error('Failed to store token in database:', error);
-      // Continue anyway to not disrupt user flow
-    }
+    return new Response(authCompletePage(conversationId, pending.shopOrigin), {
+      headers: { "Content-Type": "text/html" }
+    });
+  } catch (error) {
+    console.error("Error exchanging code for token:", error);
+    return new Response(JSON.stringify({ error: "Failed to obtain access token" }), { status: 500 });
+  }
+}
 
-    // Instead of redirecting, return HTML that auto-closes the tab
-    return new Response(`
+/**
+ * Exchange authorization code for access token
+ * @param {string} code - The authorization code
+ * @param {Object} pending - The consumed code verifier record for this flow
+ * @returns {Promise<Object>} - The token response
+ */
+async function exchangeCodeForToken(code, pending) {
+  const clientId = process.env.SHOPIFY_API_KEY;
+  if (!clientId) {
+    throw new Error("SHOPIFY_API_KEY environment variable is required");
+  }
+
+  const redirectUri = process.env.REDIRECT_URL;
+
+  const tokenUrl = await getTokenUrl(pending.conversationId);
+
+  if (!tokenUrl) {
+    throw new Error("Token URL not found");
+  }
+
+  const formData = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: clientId,
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: pending.verifier,
+  });
+
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: formData
+  });
+
+  if (!response.ok) {
+    console.log("Request id", response.headers.get("x-request-id"));
+    const errorText = await response.text();
+    throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get the token URL from the customer account URL
+ * @param {string} conversationId - The conversation ID
+ * @returns {Promise<string|null>} - The token URL or null if not found
+ */
+async function getTokenUrl(conversationId) {
+  const urls = await getCustomerAccountUrls(conversationId);
+  return urls?.tokenUrl ?? null;
+}
+
+/**
+ * Page shown in the auth popup. Hands the rotated conversation id to the storefront
+ * that opened the popup and nothing else, then closes.
+ */
+function authCompletePage(conversationId, shopOrigin) {
+  const payload = JSON.stringify({ type: "shop-ai-auth-complete", conversation_id: conversationId });
+
+  return `
       <!DOCTYPE html>
       <html>
       <head>
         <title>Authentication Successful</title>
         <script>
           window.onload = function() {
+            if (window.opener) {
+              window.opener.postMessage(${payload}, ${JSON.stringify(shopOrigin)});
+            }
             // Show success message briefly before closing
             document.getElementById('message').style.display = 'block';
             // Close the tab after a short delay
@@ -72,96 +136,5 @@ export async function loader({ request }) {
         </div>
       </body>
       </html>
-    `, {
-      headers: {
-        "Content-Type": "text/html"
-      }
-    });
-  } catch (error) {
-    console.error("Error exchanging code for token:", error);
-    console.log("shopId", shopId);
-    return new Response(JSON.stringify({ error: "Failed to obtain access token" }), { status: 500 });
-  }
-}
-
-/**
- * Exchange authorization code for access token
- * @param {string} code - The authorization code
- * @returns {Promise<Object>} - The token response
- */
-async function exchangeCodeForToken(code, state) {
-  const clientId = process.env.SHOPIFY_API_KEY;
-  const [conversationId, shopId] = state.split("-");
-  if (!clientId || !shopId) {
-    throw new Error("SHOPIFY_CLIENT_ID and SHOPIFY_SHOP_ID environment variables are required");
-  }
-
-  const redirectUri = process.env.REDIRECT_URL;
-
-  // Correct token URL format
-  const tokenUrl = await getTokenUrl(conversationId);
-
-  if (!tokenUrl) {
-    throw new Error("Token URL not found");
-  }
-
-  // Get the code verifier that corresponds to this authorization request from database
-  let codeVerifier = "";
-  try {
-    const verifierRecord = await getCodeVerifier(state);
-    if (verifierRecord) {
-      codeVerifier = verifierRecord.verifier;
-    } else {
-      console.warn("Code verifier not found for state:", state);
-      // Proceed anyway, since we might be using an older flow without PKCE
-    }
-  } catch (error) {
-    console.error("Error retrieving code verifier:", error);
-    // Proceed anyway and attempt the token exchange
-  }
-
-  const requestBody = {
-    grant_type: "authorization_code",
-    client_id: clientId,
-    code: code,
-    redirect_uri: redirectUri
-  };
-
-  // Add code_verifier if we have it
-  if (codeVerifier) {
-    requestBody.code_verifier = codeVerifier;
-  }
-
-  // Format the request as x-www-form-urlencoded instead of JSON
-  const formData = new URLSearchParams();
-  for (const [key, value] of Object.entries(requestBody)) {
-    formData.append(key, value);
-  }
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: formData
-  });
-
-  if (!response.ok) {
-    console.log("Request id", response.headers.get("x-request-id"));
-    console.log("conversation_id", conversationId);
-    const errorText = await response.text();
-    throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Get the token URL from the customer account URL
- * @param {string} conversationId - The conversation ID
- * @returns {Promise<string|null>} - The token URL or null if not found
- */
-async function getTokenUrl(conversationId) {
-  const { tokenUrl } = await getCustomerAccountUrls(conversationId);
-  return tokenUrl;
+    `;
 }

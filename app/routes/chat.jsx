@@ -95,7 +95,6 @@ async function handleChatRequest(request, shopOrigin) {
     // Create a stream for the response
     const responseStream = createSseStream(async (stream) => {
       await handleChatSession({
-        request,
         shopOrigin,
         userMessage,
         conversationId,
@@ -119,7 +118,6 @@ async function handleChatRequest(request, shopOrigin) {
 /**
  * Handle a complete chat session
  * @param {Object} params - Session parameters
- * @param {Request} params.request - The request object
  * @param {string} params.shopOrigin - Origin of the installed shop making the request
  * @param {string} params.userMessage - The user's message
  * @param {string} params.conversationId - The conversation ID
@@ -127,7 +125,6 @@ async function handleChatRequest(request, shopOrigin) {
  * @param {Object} params.stream - Stream manager for sending responses
  */
 async function handleChatSession({
-  request,
   shopOrigin,
   userMessage,
   conversationId,
@@ -139,15 +136,9 @@ async function handleChatSession({
   const toolService = createToolService();
 
   // Initialize MCP client
-  const shopId = request.headers.get("X-Shopify-Shop-Id");
   const { mcpApiUrl } = (await getCustomerAccountUrls(shopOrigin, conversationId)) ?? {};
 
-  const mcpClient = new MCPClient(
-    shopOrigin,
-    conversationId,
-    shopId,
-    mcpApiUrl,
-  );
+  const mcpClient = new MCPClient(shopOrigin, conversationId, mcpApiUrl);
 
   try {
     // Send conversation ID to client
