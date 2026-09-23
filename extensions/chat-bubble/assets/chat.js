@@ -494,6 +494,26 @@
             body: requestBody
           });
 
+          if (!response.ok) {
+            let errorMessage = 'Failed to stream response';
+            try {
+              const data = await response.json();
+              errorMessage = data.error || errorMessage;
+            } catch (e) {
+              console.error('Error parsing error response:', e);
+            }
+
+            if (response.status === 429) {
+              console.error('Rate limit exceeded:', errorMessage);
+              ShopAIChat.UI.removeTypingIndicator();
+              ShopAIChat.Message.add("Sorry, our servers are currently busy. Please try again later.",
+                'assistant', messagesContainer);
+              return;
+            }
+
+            throw new Error(errorMessage);
+          }
+
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';

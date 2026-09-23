@@ -1,10 +1,23 @@
-import { getCustomerToken } from "../db.server";
+import { getConversation, getCustomerToken } from "../db.server";
+import { conversationBelongsToShop } from "../services/conversation-access.server";
+import { corsOriginHeaders } from "../services/cors.server";
+import { rateLimitExceeded } from "../services/rate-limiter.server";
 
 /**
  * API endpoint for checking if a customer token is available for a given conversation ID
  * The chat interface can poll this endpoint after displaying an auth link
  */
 export async function loader({ request }) {
+  if (rateLimitExceeded(request, "token-status", 60)) {
+    return new Response(JSON.stringify({
+      status: "error",
+      message: "Rate limit exceeded"
+    }), {
+      status: 429,
+      headers: { "Retry-After": "60", ...corsHeaders(request) }
+    });
+  }
+
   // Get conversation ID from query parameter
   const url = new URL(request.url);
   const conversationId = url.searchParams.get("conversation_id");
@@ -31,6 +44,16 @@ export async function loader({ request }) {
   }
 
   try {
+    const conversation = await getConversation(conversationId);
+    if (!conversationBelongsToShop(conversation, shopId)) {
+      return new Response(JSON.stringify({
+        status: "unauthorized"
+      }), {
+        status: 404,
+        headers: corsHeaders(request)
+      });
+    }
+
     // Check if a token exists for this conversation ID
     const token = await getCustomerToken(conversationId, shopId);
 
@@ -66,10 +89,8 @@ export async function loader({ request }) {
  * Helper to add CORS headers to the response
  */
 function corsHeaders(request) {
-  const origin = request.headers.get("Origin") || "*";
-
   return {
-    "Access-Control-Allow-Origin": origin,
+    ...corsOriginHeaders(request),
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Accept, X-Shopify-Shop-Id",
     "Access-Control-Max-Age": "86400"
