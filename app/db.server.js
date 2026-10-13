@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 
 if (process.env.NODE_ENV !== "production") {
   if (!global.prismaGlobal) {
@@ -9,6 +10,32 @@ if (process.env.NODE_ENV !== "production") {
 const prisma = global.prismaGlobal ?? new PrismaClient();
 
 export default prisma;
+
+// PKCE verifiers are sensitive OAuth credentials; encrypt them at rest so a
+// database compromise alone cannot be used to complete an OAuth flow.
+const verifierEncryptionKey = createHash("sha256")
+  .update(process.env.SHOPIFY_API_SECRET || "")
+  .digest();
+
+const VERIFIER_AUTH_TAG_LENGTH = 16;
+
+function encryptVerifier(verifier) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", verifierEncryptionKey, iv, {
+    authTagLength: VERIFIER_AUTH_TAG_LENGTH
+  });
+  const encrypted = Buffer.concat([cipher.update(verifier, "utf8"), cipher.final()]);
+  return [iv, cipher.getAuthTag(), encrypted].map((buf) => buf.toString("hex")).join(":");
+}
+
+function decryptVerifier(stored) {
+  const [ivHex, tagHex, dataHex] = stored.split(":");
+  const decipher = createDecipheriv("aes-256-gcm", verifierEncryptionKey, Buffer.from(ivHex, "hex"), {
+    authTagLength: VERIFIER_AUTH_TAG_LENGTH
+  });
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  return Buffer.concat([decipher.update(Buffer.from(dataHex, "hex")), decipher.final()]).toString("utf8");
+}
 
 /**
  * Store a code verifier for PKCE authentication
@@ -28,7 +55,7 @@ export async function storeCodeVerifier(state, verifier, conversationId, shopOri
       data: {
         id: `cv_${Date.now()}`,
         state,
-        verifier,
+        verifier: encryptVerifier(verifier),
         conversationId,
         shopOrigin,
         expiresAt
@@ -63,6 +90,8 @@ export async function getCodeVerifier(state) {
           id: verifier.id
         }
       });
+
+      return { ...verifier, verifier: decryptVerifier(verifier.verifier) };
     }
 
     return verifier;
