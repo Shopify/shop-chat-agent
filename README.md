@@ -1,3 +1,13 @@
+> [!WARNING]
+> **This repository is archived and is no longer maintained.** Shopify removed the catalog and cart tools from the Storefront MCP server (`/api/mcp`). This app depends on those tools, so it no longer works as a way to build a storefront agent on Shopify.
+>
+> - **Merchants:** to add AI chat to your online store without code, use the [Inbox agent](https://help.shopify.com/en/manual/inbox/assigning-your-ai-staff-member) in Shopify Inbox.
+> - **Developers and third-party assistants:** build on the Universal Commerce Protocol (UCP) at `https://{shop}/api/ucp/mcp`. Start with the [agents quickstart](https://shopify.dev/docs/agents/get-started/quickstart). For a complete storefront agent sample, see [Shopify/claude-for-commerce-examples](https://github.com/Shopify/claude-for-commerce-examples).
+> - **Order lookups:** the [Customer Accounts MCP server](https://shopify.dev/docs/apps/build/storefront-mcp/servers/customer-account) does not change.
+> - **Store policies and FAQs:** `search_shop_policies_and_faqs` stays on `/api/mcp`. Refer to the [Policy and FAQs tool](https://shopify.dev/docs/agents/catalog/policy-and-faqs-tool).
+>
+> The code stays here for reference only. We do not accept issues or pull requests. For the full tool-by-tool mapping, see the [migration guide](https://shopify.dev/docs/apps/build/storefront-mcp#tool-map).
+
 # Build an AI Agent for Your Storefront
 
 A Shopify template app that lets you embed an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies or shipping, and complete purchases - all without leaving the conversation. Under the hood it speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to tap into Shopify’s APIs.
